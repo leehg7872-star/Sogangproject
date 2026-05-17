@@ -1,0 +1,2385 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>서강 진로 코파일럿 · Sogang Career Copilot</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sg-red: #8B1F30;
+  --sg-red-deep: #6E1825;
+  --sg-red-darker: #5A1320;
+  --sg-red-soft: #F4E5E8;
+  --sg-red-tint: #FBF4F5;
+  --sg-red-line: #D9B8BD;
+  --sg-red-mid: #A93849;
+  --ink: #1A1A1A;
+  --ink-2: #2C2C2C;
+  --ink-3: #444;
+  --muted: #666;
+  --faint: #999;
+  --line: #DDDDDD;
+  --line-2: #ECECEC;
+  --line-3: #F4F4F4;
+  --bg: #FFFFFF;
+  --bg-2: #F8F8F8;
+  --bg-3: #F4F4F4;
+  --white: #FFFFFF;
+  --good: #2E7D32;
+  --warn: #C77700;
+  --maxw: 1280px;
+  --content-pad: 40px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+  color: var(--ink); background: var(--white); font-size: 14px; line-height: 1.55;
+  font-feature-settings: "tnum" on;
+}
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+input, select, textarea { font-family: inherit; font-size: 14px; }
+a { color: inherit; text-decoration: none; }
+.tabular { font-variant-numeric: tabular-nums; }
+
+.sg-utility { background: var(--sg-red-deep); color: white; font-size: 12px; height: 40px; }
+.sg-utility-inner { max-width: var(--maxw); margin: 0 auto; padding: 0 var(--content-pad); height: 100%; display: flex; align-items: center; justify-content: space-between; }
+.sg-utility-left, .sg-utility-right { display: flex; align-items: center; gap: 24px; }
+.sg-utility a, .sg-utility button { color: white; font-size: 12px; opacity: 0.9; transition: opacity .15s; }
+.sg-utility a:hover, .sg-utility button:hover { opacity: 1; }
+.sg-utility .sg-divider { opacity: 0.4; }
+.sg-utility .sg-search::before { content: '🔍 '; font-size: 11px; }
+.sg-lang { font-weight: 600; padding: 0 2px; cursor: pointer; transition: opacity .15s; opacity: 0.6; }
+.sg-lang:hover { opacity: 0.95; }
+.sg-lang.active { color: white; opacity: 1; }
+.sg-utility-user { display: flex; align-items: center; gap: 12px; }
+.sg-utility-user strong { font-weight: 600; color: white; }
+.sg-utility-edit { font-size: 11px; border: 1px solid rgba(255,255,255,0.4); padding: 4px 10px; color: white; font-weight: 500; letter-spacing: 0.02em; transition: all .15s; }
+.sg-utility-edit:hover { background: white; color: var(--sg-red-deep); opacity: 1; }
+
+.sg-header { background: var(--white); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 50; }
+.sg-header-inner { max-width: var(--maxw); margin: 0 auto; padding: 0 var(--content-pad); height: 96px; display: flex; align-items: center; justify-content: space-between; gap: 40px; }
+.sg-logo { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+.sg-logo-img { height: 44px; width: auto; display: block; flex-shrink: 0; border-radius: 2px; }
+.sg-product-mark { margin-left: 16px; padding-left: 16px; border-left: 1px solid var(--line); font-size: 11px; color: var(--sg-red); font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
+
+.sg-nav { display: flex; align-items: stretch; height: 100%; }
+.sg-nav-tab { padding: 0 22px; font-size: 16px; font-weight: 600; color: var(--ink-2); letter-spacing: -0.01em; position: relative; transition: color .15s; display: flex; align-items: center; }
+.sg-nav-tab:hover { color: var(--sg-red); }
+.sg-nav-tab.active { color: var(--sg-red); }
+.sg-nav-tab.active::after { content: ''; position: absolute; bottom: -1px; left: 14px; right: 14px; height: 3px; background: var(--sg-red); }
+.sg-nav-tab .sg-nav-dot { width: 5px; height: 5px; background: var(--sg-red); border-radius: 50%; display: inline-block; margin-left: 4px; vertical-align: top; margin-top: 4px; opacity: 0; }
+.sg-nav-tab.active .sg-nav-dot { opacity: 1; }
+
+.sg-hero { background: linear-gradient(135deg, var(--sg-red) 0%, var(--sg-red-deep) 60%, var(--sg-red-darker) 100%); color: white; position: relative; overflow: hidden; padding: 64px 0 80px; }
+.sg-hero::before { content: ''; position: absolute; inset: 0; background-image: radial-gradient(circle at 20% 30%, rgba(255,255,255,0.04) 1px, transparent 1px), radial-gradient(circle at 80% 70%, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 60px 60px, 80px 80px; pointer-events: none; }
+.sg-hero::after { content: ''; position: absolute; right: -5%; top: 50%; transform: translateY(-50%); width: 360px; height: 360px; border: 60px solid rgba(255,255,255,0.04); border-radius: 50%; pointer-events: none; }
+.sg-hero-inner { max-width: var(--maxw); margin: 0 auto; padding: 0 var(--content-pad); position: relative; z-index: 2; }
+.sg-hero-eyebrow { font-size: 12px; letter-spacing: 0.25em; font-weight: 700; opacity: 0.75; margin-bottom: 14px; text-transform: uppercase; }
+.sg-hero-title { font-size: 52px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 12px; }
+.sg-hero-sub { font-size: 15px; opacity: 0.9; max-width: 580px; line-height: 1.7; }
+
+.sg-breadcrumb { background: var(--white); border-bottom: 1px solid var(--line); }
+.sg-breadcrumb-inner { max-width: var(--maxw); margin: 0 auto; padding: 14px var(--content-pad); font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.sg-breadcrumb-inner .home { color: var(--sg-red); }
+.sg-bc-sep { color: var(--faint); font-size: 10px; }
+.sg-bc-current { color: var(--ink); font-weight: 600; }
+
+main { max-width: var(--maxw); margin: 0 auto; padding: 56px var(--content-pad) 80px; background: var(--white); }
+.section { display: none; animation: fadeIn .25s ease; }
+.section.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+.section-header { margin-bottom: 56px; padding-bottom: 0; border-bottom: none; text-align: center; }
+.section-eyebrow { font-size: 11px; letter-spacing: 0.25em; color: var(--sg-red); text-transform: uppercase; font-weight: 700; margin-bottom: 14px; display: block; }
+.section-title { font-size: 38px; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 14px; line-height: 1.2; }
+.section-desc { font-size: 14.5px; color: var(--muted); max-width: 720px; margin: 0 auto; line-height: 1.75; }
+
+.card { background: var(--white); border: 1px solid var(--line); border-radius: 0; margin-bottom: 24px; transition: box-shadow .2s; }
+.card-header { padding: 22px 28px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
+.card-title { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; display: flex; align-items: center; gap: 12px; color: var(--ink); }
+.card-title-icon { width: 4px; height: 18px; background: var(--sg-red); }
+.card-body { padding: 28px; }
+.card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+
+.stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-bottom: 32px; border: 1px solid var(--line); background: var(--white); }
+.stat-box { padding: 24px 28px; border-right: 1px solid var(--line); background: var(--white); }
+.stat-box:last-child { border-right: none; }
+.stat-label { font-size: 11px; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; font-weight: 700; }
+.stat-value { font-size: 32px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; color: var(--ink); }
+.stat-value .unit { font-size: 13px; color: var(--faint); font-weight: 400; margin-left: 4px; font-family: inherit; }
+.stat-sub { font-size: 11.5px; color: var(--muted); margin-top: 6px; }
+.stat-box.accent { background: var(--sg-red-tint); border-right-color: var(--sg-red-line); }
+.stat-box.accent .stat-value { color: var(--sg-red); }
+.stat-box.accent .stat-label { color: var(--sg-red); }
+
+.btn { padding: 11px 22px; font-size: 13px; font-weight: 500; border-radius: 0; transition: all 0.15s; letter-spacing: -0.01em; }
+.btn-primary { background: var(--sg-red); color: white; font-weight: 600; }
+.btn-primary:hover { background: var(--sg-red-deep); }
+.btn-secondary { border: 1px solid var(--line); color: var(--ink-3); background: var(--white); font-weight: 500; }
+.btn-secondary:hover { border-color: var(--sg-red); color: var(--sg-red); }
+.btn-link { color: var(--muted); text-decoration: underline; text-underline-offset: 3px; font-size: 12px; }
+.btn-link:hover { color: var(--sg-red); }
+.btn-link-small { font-size: 11px; color: var(--sg-red); text-decoration: underline; text-underline-offset: 2px; background: none; border: none; cursor: pointer; padding: 0; }
+.btn-link-small:hover { color: var(--sg-red-deep); }
+
+.module-card { background: var(--white); border: 1px solid var(--line); padding: 0; cursor: pointer; transition: all .2s; position: relative; overflow: hidden; }
+.module-card:hover { border-color: var(--sg-red); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(139, 31, 48, 0.08); }
+.module-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--sg-red); transform: scaleY(0); transform-origin: top; transition: transform .25s; }
+.module-card:hover::before { transform: scaleY(1); }
+.module-card-header { padding: 22px 24px 18px; border-bottom: 1px solid var(--line-2); display: flex; justify-content: space-between; align-items: center; }
+.module-card-num { font-size: 13px; color: var(--sg-red); font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px; }
+.module-card-title { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); }
+.module-card-go { font-size: 12px; color: var(--sg-red); font-weight: 600; }
+.module-card-body { padding: 18px 24px 22px; }
+.module-card-body p { font-size: 13px; color: var(--ink-3); line-height: 1.75; }
+
+.empty { text-align: center; padding: 100px 20px; color: var(--muted); border: 1px dashed var(--line); background: var(--bg-2); }
+.empty h3 { font-size: 24px; font-weight: 700; color: var(--ink); margin-bottom: 10px; letter-spacing: -0.02em; }
+.empty p { font-size: 13.5px; margin-bottom: 28px; line-height: 1.7; }
+
+.notice { background: var(--sg-red-tint); border-left: 4px solid var(--sg-red); padding: 16px 22px; font-size: 12.5px; color: var(--ink-2); margin-bottom: 28px; line-height: 1.7; }
+.notice strong { font-weight: 700; color: var(--sg-red); }
+
+/* 백그라운드 연동 placeholder */
+.bg-placeholder { padding: 60px 30px; text-align: center; background: repeating-linear-gradient(45deg, var(--bg-2), var(--bg-2) 10px, var(--bg-3) 10px, var(--bg-3) 20px); border: 2px dashed var(--line); }
+.bg-placeholder .badge { display: inline-block; padding: 6px 14px; background: var(--ink); color: white; font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 16px; }
+.bg-placeholder h4 { font-size: 18px; font-weight: 700; color: var(--ink); margin-bottom: 10px; letter-spacing: -0.02em; }
+.bg-placeholder p { font-size: 13px; color: var(--muted); line-height: 1.7; max-width: 560px; margin: 0 auto; }
+.bg-placeholder .data-source { display: inline-block; margin-top: 14px; padding: 6px 12px; background: var(--white); border: 1px solid var(--line); font-size: 11px; color: var(--ink-3); font-family: ui-monospace, 'SF Mono', monospace; }
+
+footer { background: var(--ink); color: rgba(255,255,255,0.55); padding: 40px var(--content-pad); text-align: center; font-size: 11.5px; letter-spacing: 0.08em; }
+footer .footer-logo { font-size: 16px; font-weight: 700; letter-spacing: -0.02em; color: white; margin-bottom: 10px; }
+
+.modal-backdrop { position: fixed; inset: 0; background: rgba(26, 22, 20, 0.65); z-index: 100; display: none; align-items: flex-start; justify-content: center; padding: 40px 20px; overflow-y: auto; backdrop-filter: blur(4px); }
+.modal-backdrop.show { display: flex; }
+.modal { background: var(--white); width: 100%; max-width: 920px; border-top: 4px solid var(--sg-red); margin: auto; border-radius: 0; }
+.modal-header { padding: 32px 36px 24px; border-bottom: 1px solid var(--line); }
+.modal-title { font-size: 26px; font-weight: 700; letter-spacing: -0.03em; color: var(--ink); }
+.modal-sub { margin-top: 8px; font-size: 13px; color: var(--muted); line-height: 1.7; }
+.modal-body { padding: 28px 36px 12px; }
+.modal-footer { padding: 22px 36px; background: var(--bg-2); display: flex; gap: 12px; justify-content: space-between; border-top: 1px solid var(--line); }
+
+.form-section { margin-bottom: 32px; }
+.form-section-title { font-size: 12px; font-weight: 700; letter-spacing: 0.12em; color: var(--sg-red); margin-bottom: 14px; display: flex; align-items: center; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--line-2); }
+.form-section-title::before { content: ''; width: 4px; height: 14px; background: var(--sg-red); display: inline-block; }
+.form-section-sub { font-size: 11px; color: var(--muted); font-weight: 400; letter-spacing: 0; text-transform: none; }
+.form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.form-grid-3 { grid-template-columns: repeat(3, 1fr); }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field-full { grid-column: 1 / -1; }
+.field label { font-size: 12.5px; color: var(--ink-2); font-weight: 600; }
+.field label .req { color: var(--sg-red); margin-left: 4px; }
+.field input, .field select, .field textarea { padding: 10px 14px; border: 1px solid var(--line); background: var(--white); border-radius: 0; color: var(--ink); outline: none; transition: border-color 0.15s; }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--sg-red); box-shadow: 0 0 0 1px var(--sg-red); }
+.field textarea { resize: vertical; min-height: 80px; }
+.field-hint { font-size: 11px; color: var(--muted); line-height: 1.6; }
+
+.upload-zone { border: 2px dashed var(--line); background: var(--bg-2); padding: 32px 20px; text-align: center; transition: all 0.2s; }
+.upload-zone.dragover { border-color: var(--sg-red); background: var(--sg-red-tint); }
+.upload-zone.has-file { border-style: solid; border-color: var(--sg-red); background: var(--white); text-align: left; padding: 18px 20px; }
+.upload-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.5; }
+.upload-text-main { font-size: 13.5px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+.upload-text-sub { font-size: 11.5px; color: var(--muted); }
+.upload-spinner { width: 32px; height: 32px; border: 3px solid var(--sg-red-soft); border-top-color: var(--sg-red); border-radius: 50%; margin: 0 auto 12px; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.upload-done-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--line-2); }
+.upload-done-title { font-size: 13.5px; font-weight: 700; color: var(--good); margin-bottom: 3px; }
+.upload-done-sub { font-size: 11.5px; color: var(--muted); }
+.extracted-courses { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; max-height: 130px; overflow-y: auto; }
+.course-pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 0; font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.course-pill .pill-code { font-weight: 700; color: var(--sg-red); }
+.course-pill .pill-x { cursor: pointer; color: var(--faint); font-size: 14px; margin-left: 2px; transition: color .15s; }
+.course-pill .pill-x:hover { color: var(--sg-red); }
+.upload-meta { font-size: 11.5px; color: var(--muted); padding-top: 10px; border-top: 1px dotted var(--line-2); }
+
+@media (max-width: 1024px) {
+  :root { --content-pad: 24px; }
+  .card-grid, .stat-row { grid-template-columns: repeat(2, 1fr); }
+  .stat-row { border-right: none; }
+  .stat-box:nth-child(2n) { border-right: none; }
+  .sg-hero-title { font-size: 38px; }
+  .section-title { font-size: 30px; }
+}
+@media (max-width: 700px) {
+  :root { --content-pad: 18px; }
+  .card-grid { grid-template-columns: 1fr; }
+  .stat-row { grid-template-columns: 1fr; }
+  .stat-box { border-right: none; border-bottom: 1px solid var(--line); }
+  .stat-box:last-child { border-bottom: none; }
+  .sg-header-inner { height: 76px; gap: 16px; }
+  .sg-nav-tab { font-size: 13px; padding: 0 10px; }
+  .sg-logo-img { height: 36px; }
+  .sg-product-mark { display: none; }
+  .form-grid, .form-grid-3 { grid-template-columns: 1fr; }
+  .sg-hero { padding: 40px 0 50px; }
+  .sg-hero-title { font-size: 28px; }
+  main { padding: 40px var(--content-pad) 60px; }
+  .sg-utility-left { display: none; }
+}
+
+/* ============================================================
+   API-driven 컴포넌트 스타일
+   ============================================================ */
+/* 로딩 */
+.api-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 20px; gap: 18px; }
+.api-spinner { width: 36px; height: 36px; border: 3px solid var(--sg-red-soft); border-top-color: var(--sg-red); border-radius: 50%; animation: spin 0.75s linear infinite; }
+.api-loading-text { font-size: 13.5px; color: var(--muted); }
+.api-error { background: #FFF3F3; border-left: 4px solid #E24B4A; padding: 16px 20px; font-size: 13px; color: var(--ink-2); margin-bottom: 20px; }
+
+/* MODULE 01: 플래너 */
+.plan-stat-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 0; border: 1px solid var(--line); margin-bottom: 28px; }
+.plan-stat-cell { padding: 18px 22px; border-right: 1px solid var(--line); }
+.plan-stat-cell:last-child { border-right: none; }
+.plan-stat-cell .stat-label { font-size: 10px; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; font-weight: 700; }
+.plan-stat-cell .stat-val { font-size: 26px; font-weight: 700; letter-spacing: -0.03em; color: var(--ink); }
+.plan-stat-cell .stat-val .unit { font-size: 12px; color: var(--faint); font-weight: 400; margin-left: 3px; }
+
+.plan-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 24px; }
+.plan-card { border: 1px solid var(--line); background: var(--white); }
+.plan-card.is-rec { border-color: var(--sg-red); }
+.plan-card-top { padding: 18px 20px 14px; border-bottom: 1px solid var(--line-2); }
+.plan-card-badge { display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: 0.15em; padding: 3px 8px; background: var(--sg-red); color: white; margin-bottom: 8px; text-transform: uppercase; }
+.plan-card-label { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); margin-bottom: 4px; }
+.plan-card-summary { font-size: 12px; color: var(--muted); line-height: 1.65; }
+.plan-scores { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px 20px; border-bottom: 1px solid var(--line-2); }
+.plan-score-item .score-label { font-size: 10px; color: var(--muted); font-weight: 700; letter-spacing: 0.08em; margin-bottom: 4px; text-transform: uppercase; }
+.plan-score-item .score-val { font-size: 22px; font-weight: 700; letter-spacing: -0.03em; color: var(--sg-red); }
+.plan-score-item .score-val .score-unit { font-size: 11px; color: var(--faint); font-weight: 400; }
+.fit-bar-wrap { padding: 0 20px 14px; }
+.fit-bar { height: 4px; background: var(--line-3); border-radius: 2px; overflow: hidden; margin-top: 6px; }
+.fit-fill { height: 100%; background: var(--sg-red); border-radius: 2px; transition: width 0.6s ease; }
+
+.plan-sems { padding: 14px 20px; }
+.plan-sem-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: var(--sg-red); margin-bottom: 8px; margin-top: 12px; text-transform: uppercase; }
+.plan-sem-label:first-child { margin-top: 0; }
+.plan-course-row { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; border-bottom: 1px dotted var(--line-3); font-size: 12px; }
+.plan-course-row:last-child { border-bottom: none; }
+.plan-course-code { font-weight: 700; color: var(--sg-red); font-variant-numeric: tabular-nums; min-width: 70px; }
+.plan-course-name { color: var(--ink-2); flex: 1; padding: 0 8px; }
+.plan-course-cr { color: var(--faint); white-space: nowrap; }
+.plan-sem-total { font-size: 10.5px; color: var(--muted); text-align: right; padding-top: 4px; }
+
+.basis-card { border: 1px solid var(--line); padding: 20px 24px; margin-top: 8px; }
+.basis-card-title { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: var(--sg-red); text-transform: uppercase; margin-bottom: 12px; }
+.basis-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+.basis-item { font-size: 12px; }
+.basis-item strong { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* MODULE 02: 재설계 */
+.trajectory-wrap { margin-bottom: 24px; }
+.trajectory-row { display: flex; align-items: flex-start; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--line-3); }
+.trajectory-dot { width: 10px; height: 10px; background: var(--sg-red); border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+.trajectory-period { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 0.06em; min-width: 80px; text-transform: uppercase; }
+.trajectory-detail { font-size: 13px; color: var(--ink-2); line-height: 1.65; }
+.diff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line); margin-bottom: 16px; }
+.diff-col { background: var(--white); padding: 18px 20px; }
+.diff-col-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; }
+.diff-col.before { background: var(--bg-2); }
+.diff-col.after { background: var(--white); }
+.diff-item { font-size: 12.5px; padding: 5px 0; border-bottom: 1px dotted var(--line-3); color: var(--ink-2); }
+.diff-item:last-child { border-bottom: none; }
+.diff-reason { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.7; }
+.trigger-note { background: var(--sg-red-tint); border-left: 4px solid var(--sg-red); padding: 14px 18px; font-size: 12.5px; color: var(--ink-2); line-height: 1.7; margin-top: 8px; }
+
+/* MODULE 03: 강의 추천 */
+.recommender-controls { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+.recommender-controls select { padding: 8px 12px; border: 1px solid var(--line); font-size: 13px; background: var(--white); color: var(--ink); }
+.recommender-controls select:focus { outline: none; border-color: var(--sg-red); }
+.recommender-controls .ctrl-label { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+.course-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.course-table th { padding: 10px 14px; text-align: left; background: var(--bg-3); border-bottom: 2px solid var(--line); font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; white-space: nowrap; }
+.course-table td { padding: 11px 14px; border-bottom: 1px solid var(--line-2); vertical-align: middle; }
+.course-table tr:last-child td { border-bottom: none; }
+.course-table tr:hover td { background: var(--sg-red-tint); }
+.fit-pill { display: inline-block; padding: 3px 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; border-radius: 0; }
+.fit-pill.high { background: #E8F5E9; color: #2E7D32; }
+.fit-pill.mid  { background: #FFF8E1; color: #C77700; }
+.fit-pill.low  { background: var(--bg-3); color: var(--muted); }
+.top3-rationale { border: 1px solid var(--sg-red-line); background: var(--sg-red-tint); padding: 22px 24px; margin-top: 24px; }
+.top3-title { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; color: var(--sg-red); text-transform: uppercase; margin-bottom: 12px; }
+.top3-text { font-size: 13px; color: var(--ink-2); line-height: 1.8; white-space: pre-line; }
+
+/* MODULE 04: 기회 */
+.opp-overview { display: grid; grid-template-columns: repeat(3,1fr); gap: 0; border: 1px solid var(--line); margin-bottom: 24px; }
+.opp-ov-cell { padding: 18px 22px; border-right: 1px solid var(--line); }
+.opp-ov-cell:last-child { border-right: none; }
+.opp-ov-cell .ov-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+.opp-ov-cell .ov-val { font-size: 28px; font-weight: 700; color: var(--sg-red); letter-spacing: -0.03em; }
+.opp-ov-cell .ov-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.opp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.opp-card { border: 1px solid var(--line); padding: 18px 20px; position: relative; transition: border-color .15s, box-shadow .15s; }
+.opp-card:hover { border-color: var(--sg-red); box-shadow: 0 2px 8px rgba(139,31,48,.08); }
+.opp-card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+.opp-tag { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; padding: 3px 8px; background: var(--ink); color: white; text-transform: uppercase; }
+.opp-tag.intern { background: var(--sg-red); }
+.opp-tag.contest { background: #1565C0; }
+.opp-tag.activity { background: #2E7D32; }
+.opp-tag.campus { background: #6A1B9A; }
+.opp-tag.cert { background: var(--warn); color: white; }
+.opp-tag.study { background: #00838F; }
+.match-badge { font-size: 13px; font-weight: 700; color: var(--sg-red); }
+.opp-org { font-size: 11px; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+.opp-title { font-size: 14px; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; margin-bottom: 8px; line-height: 1.4; }
+.opp-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 11.5px; color: var(--muted); border-top: 1px solid var(--line-2); padding-top: 10px; margin-top: 8px; }
+.opp-meta span::before { content: ''; }
+.opp-reason { font-size: 12px; color: var(--ink-2); line-height: 1.65; margin-top: 6px; }
+
+/* MODULE 05: 동문 */
+.alumni-overview { background: linear-gradient(120deg, var(--sg-red) 0%, var(--sg-red-deep) 100%); color: white; padding: 28px 32px; margin-bottom: 24px; }
+.alumni-ov-headline { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 8px; }
+.alumni-ov-meta { font-size: 13px; opacity: 0.85; display: flex; gap: 20px; flex-wrap: wrap; }
+.alumni-companies { margin-bottom: 24px; }
+.alumni-companies-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; }
+.alumni-company-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.alumni-company-chip { border: 1px solid var(--sg-red-line); background: var(--sg-red-tint); padding: 5px 14px; font-size: 12.5px; font-weight: 600; color: var(--sg-red); }
+.pattern-section { margin-bottom: 24px; }
+.pattern-section-title { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; color: var(--sg-red); text-transform: uppercase; margin-bottom: 12px; }
+.pattern-row { display: grid; grid-template-columns: 180px 1fr 60px; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line-3); }
+.pattern-row:last-child { border-bottom: none; }
+.pattern-code { font-size: 12px; font-weight: 700; color: var(--sg-red); font-variant-numeric: tabular-nums; }
+.pattern-name { font-size: 12.5px; color: var(--ink-2); }
+.pattern-bar-wrap { display: flex; align-items: center; gap: 8px; }
+.pattern-bar { height: 6px; background: var(--sg-red-soft); border-radius: 0; flex: 1; }
+.pattern-bar-fill { height: 100%; background: var(--sg-red); border-radius: 0; }
+.pattern-pct { font-size: 12px; font-weight: 700; color: var(--sg-red); text-align: right; font-variant-numeric: tabular-nums; }
+.alumni-insight { border: 1px solid var(--sg-red-line); background: var(--sg-red-tint); padding: 18px 22px; }
+.alumni-insight-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; color: var(--sg-red); text-transform: uppercase; margin-bottom: 8px; }
+.alumni-insight-text { font-size: 13px; color: var(--ink-2); line-height: 1.8; white-space: pre-line; }
+
+@media (max-width: 900px) {
+  .plan-grid { grid-template-columns: 1fr; }
+  .opp-grid { grid-template-columns: 1fr; }
+  .basis-grid { grid-template-columns: 1fr; }
+  .diff-grid { grid-template-columns: 1fr; }
+  .opp-overview { grid-template-columns: 1fr; }
+}
+
+</style>
+</head>
+<body>
+
+<!-- 상단 유틸리티 바 -->
+<div class="sg-utility">
+  <div class="sg-utility-inner">
+    <div class="sg-utility-left">
+      <a href="https://saint.sogang.ac.kr" target="_blank">SAINT</a>
+      <a href="#" data-i18n="utilCommunity">청년광장</a>
+      <a href="#" data-i18n="utilSitemap">사이트 맵</a>
+    </div>
+    <div class="sg-utility-right">
+      <span class="sg-search" data-i18n="utilSearch">검색</span>
+      <span class="sg-lang active" id="lang-kor" onclick="setLang('kor')">KOR</span>
+      <span class="sg-divider">|</span>
+      <span class="sg-lang" id="lang-eng" onclick="setLang('eng')">ENG</span>
+      <span class="sg-divider">|</span>
+      <div class="sg-utility-user">
+        <span id="greeting-text"></span>
+        <button class="sg-utility-edit" onclick="openOnboarding()" data-i18n="editInfo">내 정보 수정</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 메인 헤더 -->
+<header class="sg-header">
+  <div class="sg-header-inner">
+    <div style="display: flex; align-items: center;">
+      <div class="sg-logo">
+        <div style="height: 44px; width: 110px; background: var(--sg-red); color: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; letter-spacing: 0.05em;" data-i18n="sogangLogo">SOGANG</div>
+      </div>
+      <span class="sg-product-mark">Career Copilot</span>
+    </div>
+    <nav class="sg-nav">
+      <button class="sg-nav-tab active" data-section="dashboard" data-i18n="navDashboard">대시보드<span class="sg-nav-dot"></span></button>
+      <button class="sg-nav-tab" data-section="planner" data-i18n="navPlanner">졸업 플래너<span class="sg-nav-dot"></span></button>
+      <button class="sg-nav-tab" data-section="rebalance" data-i18n="navRebalance">학기 재설계<span class="sg-nav-dot"></span></button>
+      <button class="sg-nav-tab" data-section="recommender" data-i18n="navRecommender">강의 추천<span class="sg-nav-dot"></span></button>
+      <button class="sg-nav-tab" data-section="opportunities" data-i18n="navOpportunities">진로 기회<span class="sg-nav-dot"></span></button>
+      <button class="sg-nav-tab" data-section="alumni" data-i18n="navAlumni">동문 경로<span class="sg-nav-dot"></span></button>
+    </nav>
+  </div>
+</header>
+
+<!-- 히어로 -->
+<div class="sg-hero">
+  <div class="sg-hero-inner">
+    <div class="sg-hero-eyebrow">Sogang Career Copilot</div>
+    <h1 class="sg-hero-title" data-i18n="heroTitle">서강 진로 코파일럿</h1>
+    <p class="sg-hero-sub" data-i18n-html="heroSub">입학부터 취업까지, 서강 내부 데이터(요람·강의평가·동문 진로)로 움직이는<br>나만의 진로 내비게이션. 5개 모듈이 하나의 학생 궤적을 통합합니다.</p>
+  </div>
+</div>
+
+<!-- 브레드크럼 -->
+<div class="sg-breadcrumb">
+  <div class="sg-breadcrumb-inner">
+    <span class="home">🏠</span>
+    <span data-i18n="bcHome">홈</span>
+    <span class="sg-bc-sep">›</span>
+    <span data-i18n="bcStudentService">학생 서비스</span>
+    <span class="sg-bc-sep">›</span>
+    <span>Career Copilot</span>
+    <span class="sg-bc-sep">›</span>
+    <span class="sg-bc-current" id="bc-current" data-i18n="navDashboard">대시보드</span>
+    <span style="margin-left: auto; font-size: 11px; color: var(--faint);" id="header-date"></span>
+  </div>
+</div>
+
+<main>
+
+<!-- Dashboard -->
+<section class="section active" id="dashboard">
+  <div class="section-header">
+    <div class="section-eyebrow">DASHBOARD</div>
+    <div class="section-title" data-i18n="dashTitle">대시보드</div>
+    <div class="section-desc" data-i18n="dashDesc">입력한 정보를 바탕으로 5개 모듈이 동시에 작동합니다.</div>
+  </div>
+
+  <div id="empty-state" class="empty">
+    <h3 data-i18n="emptyTitle">먼저 정보를 입력해 주세요</h3>
+    <p data-i18n="emptyDesc">5개 모듈이 모두 작동하려면 학과·이수 내역·목표 직무 등이 필요합니다.</p>
+    <button class="btn btn-primary" onclick="openOnboarding()" data-i18n="emptyBtn">정보 입력하기</button>
+  </div>
+
+  <div id="dashboard-content" style="display: none;">
+    <div class="stat-row">
+      <div class="stat-box">
+        <div class="stat-label" data-i18n="statMajor">학과 / 학번</div>
+        <div class="stat-value" id="d-major" style="font-size: 18px;">—</div>
+        <div class="stat-sub" id="d-id">—</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label" data-i18n="statCredits">이수 학점</div>
+        <div class="stat-value tabular"><span id="d-credits">0</span><span class="unit">/ 130</span></div>
+        <div class="stat-sub" id="d-credits-pct">—</div>
+      </div>
+      <div class="stat-box accent">
+        <div class="stat-label" data-i18n="statRemaining">잔여 학점</div>
+        <div class="stat-value tabular"><span id="d-remaining">0</span><span class="unit" data-i18n="unitCredit">학점</span></div>
+        <div class="stat-sub" id="d-remaining-sub">—</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label" data-i18n="statJob">목표 직무</div>
+        <div class="stat-value" id="d-job" style="font-size: 16px; color: var(--sg-red);">—</div>
+        <div class="stat-sub" id="d-track">—</div>
+      </div>
+    </div>
+
+    <div class="card-grid" style="grid-template-columns: repeat(3, 1fr); gap: 16px;">
+      <div class="module-card" onclick="switchTab('planner')">
+        <div class="module-card-header">
+          <div>
+            <div class="module-card-num">MODULE 01</div>
+            <div class="module-card-title" data-i18n="mod1Title">졸업 역산 플래너</div>
+          </div>
+          <span class="module-card-go">→</span>
+        </div>
+        <div class="module-card-body"><p data-i18n="mod1Desc">요람 졸업 요건과 직무 적합도를 동시에 만족시키는 잔여 학기 수강 조합을 산출합니다.</p></div>
+      </div>
+      <div class="module-card" onclick="switchTab('rebalance')">
+        <div class="module-card-header">
+          <div>
+            <div class="module-card-num">MODULE 02</div>
+            <div class="module-card-title" data-i18n="mod2Title">학기 재설계</div>
+          </div>
+          <span class="module-card-go">→</span>
+        </div>
+        <div class="module-card-body"><p data-i18n="mod2Desc">학기 종료 시점에 이수 결과를 입력하면 남은 학기 계획이 동적으로 갱신됩니다.</p></div>
+      </div>
+      <div class="module-card" onclick="switchTab('recommender')">
+        <div class="module-card-header">
+          <div>
+            <div class="module-card-num">MODULE 03</div>
+            <div class="module-card-title" data-i18n="mod3Title">직무 적합도 강의 추천</div>
+          </div>
+          <span class="module-card-go">→</span>
+        </div>
+        <div class="module-card-body"><p data-i18n="mod3Desc">요람 + SAINT 강의평가 데이터를 결합해 목표 직무에 적합한 강의를 정량 지표와 함께 제시합니다.</p></div>
+      </div>
+      <div class="module-card" onclick="switchTab('opportunities')">
+        <div class="module-card-header">
+          <div>
+            <div class="module-card-num">MODULE 04</div>
+            <div class="module-card-title" data-i18n="mod4Title">진로 기회 큐레이션</div>
+          </div>
+          <span class="module-card-go">→</span>
+        </div>
+        <div class="module-card-body"><p data-i18n="mod4Desc">교내 공지·외부 공모전·대외활동·인턴 공고를 직무 의미 매칭으로 큐레이션합니다.</p></div>
+      </div>
+      <div class="module-card" onclick="switchTab('alumni')">
+        <div class="module-card-header">
+          <div>
+            <div class="module-card-num">MODULE 05</div>
+            <div class="module-card-title" data-i18n="mod5Title">동문 진로 경로 패턴</div>
+          </div>
+          <span class="module-card-go">→</span>
+        </div>
+        <div class="module-card-body"><p data-i18n="mod5Desc">최근 5년간 같은 직무로 진출한 서강 졸업생들의 공통 이수 강의·활동·자격증 패턴.</p></div>
+      </div>
+    </div>
+
+    <div class="notice" style="margin-top: 24px;" data-i18n-html="dashNotice">
+      ※ 본 데모는 학교 내부 시스템과 연동되지 않은 <strong>UI 시연용 빌드</strong>입니다. 강의 카탈로그, 동문 진로 통계, 진로 공고 등의 데이터는 백그라운드 시스템(SAINT 강의평가 DB · 취업지원팀 데이터 · 교내 공지 · 요람)과 연동 시 자동으로 채워집니다.
+    </div>
+  </div>
+</section>
+
+<section class="section" id="planner">
+  <div class="section-header">
+    <div class="section-eyebrow">MODULE 01 · GRADUATION PLANNER</div>
+    <div class="section-title" data-i18n="m1Title">요람 기반 졸업 역산 플래너</div>
+    <div class="section-desc" data-i18n="m1Desc">입학년도 요람과 이수 내역을 바탕으로, 잔여 학기를 짜는 3가지 경로를 산출합니다.</div>
+  </div>
+  <div id="planner-content"></div>
+</section>
+
+<section class="section" id="rebalance">
+  <div class="section-header">
+    <div class="section-eyebrow">MODULE 02 · DYNAMIC REBALANCE</div>
+    <div class="section-title" data-i18n="m2Title">학기별 로드맵 동적 재설계</div>
+    <div class="section-desc" data-i18n="m2Desc">학기 결과·신규 활동을 입력하면 남은 학기 계획이 갱신됩니다.</div>
+  </div>
+
+  <!-- 학기 업데이트 입력 폼 -->
+  <div class="card" id="rebalance-form-card">
+    <div class="card-header">
+      <div class="card-title"><span class="card-title-icon"></span>이번 학기 업데이트 입력</div>
+    </div>
+    <div class="card-body">
+      <div class="form-grid" style="margin-bottom:20px;">
+        <div class="field">
+          <label>새로 이수한 과목 코드 <span style="font-size:11px;color:var(--muted);">(쉼표 구분)</span></label>
+          <input type="text" id="rb-completed" placeholder="CSE3080, MGT3006, CHI4008">
+          <div class="field-hint">이번 학기에 통과한 과목 코드를 입력하세요.</div>
+        </div>
+        <div class="field">
+          <label>과목별 성적 <span style="font-size:11px;color:var(--muted);">(코드:성적 형식, 쉼표 구분)</span></label>
+          <input type="text" id="rb-grades" placeholder="CSE3080:A+, MGT3006:B0, CHI4008:F">
+          <div class="field-hint">성적 입력 시 F·D 과목은 자동으로 재수강 대상으로 분류됩니다.</div>
+        </div>
+        <div class="field">
+          <label>현재 누적 GPA</label>
+          <input type="number" id="rb-gpa" placeholder="3.5" min="0" max="4.5" step="0.01">
+        </div>
+        <div class="field">
+          <label>추가 휴학 학기 수</label>
+          <select id="rb-leave">
+            <option value="0">없음</option>
+            <option value="1">1학기</option>
+            <option value="2">2학기</option>
+            <option value="3">3학기</option>
+            <option value="4">4학기</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>전공 변경 <span style="font-size:11px;color:var(--muted);">(변경 없으면 공란)</span></label>
+          <input type="text" id="rb-major-change" placeholder="소프트웨어학">
+        </div>
+        <div class="field">
+          <label>신규 비교과 활동·인턴십</label>
+          <input type="text" id="rb-activities" placeholder="멋쟁이사자처럼 수료, 삼성 SDS 인턴">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="runRebalance()">재설계 실행</button>
+    </div>
+  </div>
+
+  <div id="rebalance-content"></div>
+</section>
+
+<section class="section" id="recommender">
+  <div class="section-header">
+    <div class="section-eyebrow">MODULE 03 · COURSE RECOMMENDER</div>
+    <div class="section-title" data-i18n="m3Title">SAINT 강의평가·요람 연동 직무 적합도 강의 추천</div>
+    <div class="section-desc" data-i18n="m3Desc">요람 강의 데이터와 강의평가를 결합해 목표 직무 적합도 순으로 정렬합니다.</div>
+  </div>
+  <div id="recommender-content"></div>
+</section>
+
+<section class="section" id="opportunities">
+  <div class="section-header">
+    <div class="section-eyebrow">MODULE 04 · OPPORTUNITY CURATION</div>
+    <div class="section-title" data-i18n="m4Title">직무 매칭 진로 기회 큐레이션</div>
+    <div class="section-desc" data-i18n="m4Desc">교내 공지·외부 공모전·대외활동·인턴 공고를 직무 의미 매칭으로 분류합니다.</div>
+  </div>
+  <div id="opportunities-content"></div>
+</section>
+
+<section class="section" id="alumni">
+  <div class="section-header">
+    <div class="section-eyebrow">MODULE 05 · ALUMNI PATH ANALYSIS</div>
+    <div class="section-title" data-i18n="m5Title">동문 진로 경로 패턴 분석</div>
+    <div class="section-desc" data-i18n="m5Desc">집계형 분석. 개별 매칭이 아닌 N명의 공통 패턴을 보여줍니다.</div>
+  </div>
+  <div id="alumni-content"></div>
+</section>
+
+</main>
+
+<footer>
+  <div class="footer-logo" data-i18n="footerLogo">서강대학교 SOGANG UNIVERSITY</div>
+  <div data-i18n="footerLine1">Sogang Career Copilot · 2026 서강대학교 생성형 AI 기반 아이디어 공모전 · DEMO</div>
+  <div style="margin-top: 6px; font-size: 10px;" data-i18n="footerLine2">04107 서울특별시 마포구 백범로 35 · 본 데모는 시연용으로 제작되었습니다</div>
+</footer>
+
+<!-- Onboarding Modal -->
+<div class="modal-backdrop" id="onboarding">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" data-i18n="modalTitle">내 정보 입력</div>
+      <div class="modal-sub" data-i18n="modalSub">5개 모듈 작동에 필요한 정보를 입력하세요. 이수 강의는 SAINT에서 다운로드한 과목이수표를 업로드하면 백그라운드 시스템이 자동 추출합니다.</div>
+    </div>
+    <div class="modal-body">
+
+      <div class="form-section">
+        <div class="form-section-title">
+          <span data-i18n="formRequired">필수 정보</span>
+          <span class="form-section-sub" data-i18n="formRequiredSub">(없으면 모듈 ①②③ 작동 불가)</span>
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label><span data-i18n="lbName">이름</span> <span class="req">*</span></label>
+            <input type="text" id="f-name" data-i18n-placeholder="phName" placeholder="홍길동">
+          </div>
+          <div class="field">
+            <label><span data-i18n="lbStudentId">학번 / 입학년도</span> <span class="req">*</span></label>
+            <input type="text" id="f-studentId" data-i18n-placeholder="phStudentId" placeholder="21학번">
+          </div>
+          <div class="field">
+            <label><span data-i18n="lbMajor">본전공 학과</span> <span class="req">*</span></label>
+            <select id="f-major" onchange="onMajorChange()">
+              <option value="">— 선택 —</option>
+              <optgroup label="인문대학">
+                <option value="국어국문학과">국어국문학과</option>
+                <option value="사학과">사학과</option>
+                <option value="철학과">철학과</option>
+                <option value="종교학과">종교학과</option>
+                <option value="영미어문전공">영미어문전공</option>
+                <option value="미국문화전공">미국문화전공</option>
+                <option value="유럽문화학과">유럽문화학과</option>
+                <option value="중국문화학과">중국문화학과</option>
+                <option value="인문학기반 자유전공학부">인문학기반 자유전공학부</option>
+              </optgroup>
+              <optgroup label="사회과학대학">
+                <option value="사회학과">사회학과</option>
+                <option value="정치외교학과">정치외교학과</option>
+                <option value="심리학과">심리학과</option>
+              </optgroup>
+              <optgroup label="자연과학대학">
+                <option value="수학과">수학과</option>
+                <option value="물리학과">물리학과</option>
+                <option value="화학과">화학과</option>
+                <option value="생명과학과">생명과학과</option>
+                <option value="SCIENCE기반 자유전공학부">SCIENCE기반 자유전공학부</option>
+              </optgroup>
+              <optgroup label="공과대학">
+                <option value="전자공학과">전자공학과</option>
+                <option value="화공생명공학과">화공생명공학과</option>
+                <option value="기계공학과">기계공학과</option>
+                <option value="시스템반도체공학과">시스템반도체공학과</option>
+              </optgroup>
+              <optgroup label="소프트웨어융합대학">
+                <option value="컴퓨터공학과">컴퓨터공학과</option>
+                <option value="인공지능학과">인공지능학과</option>
+                <option value="AI기반 자유전공학부">AI기반 자유전공학부</option>
+              </optgroup>
+              <optgroup label="경제대학">
+                <option value="경제학과">경제학과</option>
+              </optgroup>
+              <optgroup label="경영대학">
+                <option value="경영학부">경영학부</option>
+              </optgroup>
+              <optgroup label="지식융합미디어대학">
+                <option value="신문방송학과">신문방송학과</option>
+                <option value="미디어&엔터테인먼트학과">미디어&amp;엔터테인먼트학과</option>
+                <option value="Art &amp; Technology">Art &amp; Technology</option>
+              </optgroup>
+              <optgroup label="로욜라국제대학">
+                <option value="Global Korean Studies">Global Korean Studies</option>
+                <option value="한국어교육전공">한국어교육전공</option>
+                <option value="International Relations">International Relations</option>
+                <option value="International Commerce">International Commerce</option>
+                <option value="Asian Studies">Asian Studies</option>
+                <option value="글로벌경제전공">글로벌경제전공</option>
+                <option value="글로벌경영전공">글로벌경영전공</option>
+                <option value="글로벌미디어전공">글로벌미디어전공</option>
+              </optgroup>
+            </select>
+            <div class="field-hint">2025학년도 서강대학교 요람 기준 전체 학과 (37개)</div>
+          </div>
+          <div class="field">
+            <label><span data-i18n="lbTrack">본전공 경로</span> <span class="req">*</span></label>
+            <select id="f-track" onchange="onTrackChange()">
+              <option value="">— 학과를 먼저 선택하세요 —</option>
+            </select>
+            <div class="field-hint">학과 선택 시 해당 학과의 이수 경로가 자동으로 표시됩니다 · 다전공 선택 시 짝 학과를 추가 지정합니다</div>
+          </div>
+          <!-- ── 제 2전공 ───────────────────────────────────────── -->
+          <div class="field field-full" id="f-secondary-wrapper" style="display: none;">
+            <label style="display:flex;align-items:center;gap:8px;">
+              <span style="background:var(--sg-red);color:white;font-size:10px;font-weight:700;padding:2px 8px;letter-spacing:0.05em;">제 2전공</span>
+              <span class="req">*</span>
+              <span style="font-size:11px;color:var(--muted);font-weight:400;">다전공 이수 시 필수 · 계열·성적 제한 없음</span>
+            </label>
+            <select id="f-secondaryMajor" onchange="updateMajorHints()">
+              <option value="">— 선택 —</option>
+              <optgroup label="인문대학">
+                <option value="국어국문학과">국어국문학과</option>
+                <option value="사학과">사학과</option>
+                <option value="철학과">철학과</option>
+                <option value="종교학과">종교학과</option>
+                <option value="영미어문전공">영미어문전공</option>
+                <option value="미국문화전공">미국문화전공</option>
+                <option value="유럽문화학과">유럽문화학과</option>
+                <option value="중국문화학과">중국문화학과</option>
+              </optgroup>
+              <optgroup label="사회과학대학">
+                <option value="사회학과">사회학과</option>
+                <option value="정치외교학과">정치외교학과</option>
+                <option value="심리학과">심리학과</option>
+              </optgroup>
+              <optgroup label="자연과학대학">
+                <option value="수학과">수학과</option>
+                <option value="물리학과">물리학과</option>
+                <option value="화학과">화학과</option>
+                <option value="생명과학과">생명과학과</option>
+              </optgroup>
+              <optgroup label="공과대학">
+                <option value="전자공학과">전자공학과</option>
+                <option value="화공생명공학과">화공생명공학과</option>
+                <option value="기계공학과">기계공학과</option>
+                <option value="시스템반도체공학과">시스템반도체공학과</option>
+              </optgroup>
+              <optgroup label="소프트웨어융합대학">
+                <option value="컴퓨터공학과">컴퓨터공학과</option>
+                <option value="인공지능학과">인공지능학과</option>
+              </optgroup>
+              <optgroup label="경제대학">
+                <option value="경제학과">경제학과</option>
+              </optgroup>
+              <optgroup label="경영대학">
+                <option value="경영학부">경영학부</option>
+              </optgroup>
+              <optgroup label="지식융합미디어대학">
+                <option value="신문방송학과">신문방송학과</option>
+                <option value="미디어&엔터테인먼트학과">미디어&amp;엔터테인먼트학과</option>
+                <option value="Art &amp; Technology">Art &amp; Technology</option>
+              </optgroup>
+              <optgroup label="로욜라국제대학">
+                <option value="Global Korean Studies">Global Korean Studies</option>
+                <option value="International Relations">International Relations</option>
+                <option value="International Commerce">International Commerce</option>
+                <option value="Asian Studies">Asian Studies</option>
+              </optgroup>
+            </select>
+            <div style="margin-top:10px;">
+              <button type="button" id="btn-add-third"
+                onclick="toggleThirdMajor(true)"
+                style="font-size:12px;color:var(--sg-red);border:1px dashed var(--sg-red);padding:6px 14px;background:var(--sg-red-tint);cursor:pointer;font-family:inherit;font-weight:600;">
+                + 제 3전공 추가 (서강대 최대 3전공 이수 가능)
+              </button>
+            </div>
+          </div>
+
+          <!-- ── 제 3전공 ───────────────────────────────────────── -->
+          <div class="field field-full" id="f-third-wrapper" style="display: none;">
+            <label style="display:flex;align-items:center;gap:8px;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="background:var(--ink-3);color:white;font-size:10px;font-weight:700;padding:2px 8px;letter-spacing:0.05em;">제 3전공</span>
+                <span style="font-size:11px;color:var(--muted);font-weight:400;">선택사항 · 4학기 이상 재학 후 신청 가능</span>
+              </div>
+              <button type="button" onclick="toggleThirdMajor(false)"
+                style="font-size:11px;color:var(--muted);border:none;background:none;cursor:pointer;text-decoration:underline;font-family:inherit;">
+                제거
+              </button>
+            </label>
+            <select id="f-thirdMajor" onchange="updateMajorHints()">
+              <option value="">— 선택 —</option>
+              <optgroup label="인문대학">
+                <option value="국어국문학과">국어국문학과</option>
+                <option value="사학과">사학과</option>
+                <option value="철학과">철학과</option>
+                <option value="종교학과">종교학과</option>
+                <option value="영미어문전공">영미어문전공</option>
+                <option value="미국문화전공">미국문화전공</option>
+                <option value="유럽문화학과">유럽문화학과</option>
+                <option value="중국문화학과">중국문화학과</option>
+              </optgroup>
+              <optgroup label="사회과학대학">
+                <option value="사회학과">사회학과</option>
+                <option value="정치외교학과">정치외교학과</option>
+                <option value="심리학과">심리학과</option>
+              </optgroup>
+              <optgroup label="자연과학대학">
+                <option value="수학과">수학과</option>
+                <option value="물리학과">물리학과</option>
+                <option value="화학과">화학과</option>
+                <option value="생명과학과">생명과학과</option>
+              </optgroup>
+              <optgroup label="공과대학">
+                <option value="전자공학과">전자공학과</option>
+                <option value="화공생명공학과">화공생명공학과</option>
+                <option value="기계공학과">기계공학과</option>
+                <option value="시스템반도체공학과">시스템반도체공학과</option>
+              </optgroup>
+              <optgroup label="소프트웨어융합대학">
+                <option value="컴퓨터공학과">컴퓨터공학과</option>
+                <option value="인공지능학과">인공지능학과</option>
+              </optgroup>
+              <optgroup label="경제대학">
+                <option value="경제학과">경제학과</option>
+              </optgroup>
+              <optgroup label="경영대학">
+                <option value="경영학부">경영학부</option>
+              </optgroup>
+              <optgroup label="지식융합미디어대학">
+                <option value="신문방송학과">신문방송학과</option>
+                <option value="미디어&엔터테인먼트학과">미디어&amp;엔터테인먼트학과</option>
+                <option value="Art &amp; Technology">Art &amp; Technology</option>
+              </optgroup>
+              <optgroup label="로욜라국제대학">
+                <option value="Global Korean Studies">Global Korean Studies</option>
+                <option value="International Relations">International Relations</option>
+                <option value="International Commerce">International Commerce</option>
+                <option value="Asian Studies">Asian Studies</option>
+              </optgroup>
+            </select>
+            <div class="field-hint" id="major-hint" style="color:var(--sg-red);font-weight:500;margin-top:6px;"></div>
+          </div>
+          <!-- ── 부가 과정 (교직·학석사) ────────────────────────── -->
+          <div class="field field-full" id="f-addon-wrapper">
+            <label style="font-weight:600;">부가 과정 <span style="font-size:11px;color:var(--muted);font-weight:400;">해당하는 경우 체크</span></label>
+            <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:6px;">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;">
+                <input type="checkbox" id="f-teacherCert" style="width:16px;height:16px;accent-color:var(--sg-red);">
+                <span>교직과정 이수</span>
+                <span style="font-size:11px;color:var(--muted);">(23학점 이상)</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;">
+                <input type="checkbox" id="f-bsms" style="width:16px;height:16px;accent-color:var(--sg-red);">
+                <span>학석사 연계과정</span>
+                <span style="font-size:11px;color:var(--muted);">(6학기 95학점 이상)</span>
+              </label>
+            </div>
+          </div>
+          <div class="field">
+            <label><span data-i18n="lbCurrentYS">현재 학년 / 학기</span> <span class="req">*</span></label>
+            <select id="f-currentYS">
+              <option value="1-1">1-1</option>
+              <option value="1-2">1-2</option>
+              <option value="2-1">2-1</option>
+              <option value="2-2">2-2</option>
+              <option value="3-1">3-1</option>
+              <option value="3-2">3-2</option>
+              <option value="4-1">4-1</option>
+              <option value="4-2">4-2</option>
+            </select>
+          </div>
+          <div class="field">
+            <label data-i18n="lbMilitary">군 복무</label>
+            <select id="f-military">
+              <option value="해당없음" data-i18n-key="militaryNone">해당 없음</option>
+              <option value="군필" data-i18n-key="militaryDone">군필</option>
+              <option value="미필" data-i18n-key="militaryPending">미필 (휴학 예정)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label><span data-i18n="lbCreditsTotal">누적 이수 학점</span> <span class="req">*</span></label>
+            <input type="number" id="f-credits" placeholder="0" min="0" max="200">
+          </div>
+          <div class="field">
+            <label><span data-i18n="lbJob">목표 직무</span> <span class="req">*</span></label>
+            <input type="text" id="f-job" data-i18n-placeholder="phJob" placeholder="" onchange="updateMajorHints()" oninput="updateMajorHints()">
+            <div class="field-hint" data-i18n="hintJob">예: PM, 데이터 엔지니어, 무역 사기업, UX 리서처</div>
+          </div>
+          <div class="field field-full">
+            <label><span data-i18n="lbTranscript">과목 이수표 업로드</span> <span class="req">*</span></label>
+            <div class="upload-zone" id="upload-zone">
+              <div class="upload-zone-empty" id="upload-empty">
+                <div class="upload-icon">📄</div>
+                <div class="upload-text-main" data-i18n="uploadMain">SAINT에서 다운로드한 과목이수표를 업로드하세요</div>
+                <div class="upload-text-sub" data-i18n="uploadSub">PDF · PNG · JPG · OZD 지원 · 최대 10MB</div>
+                <button type="button" class="btn btn-secondary" id="upload-btn-trigger" style="margin-top: 12px;" data-i18n="uploadBtn">파일 선택</button>
+                <input type="file" id="f-transcript-file" accept=".pdf,.png,.jpg,.jpeg,.ozd" style="display: none;">
+              </div>
+              <div class="upload-zone-loading" id="upload-loading" style="display: none;">
+                <div class="upload-spinner"></div>
+                <div class="upload-text-main" id="upload-loading-text" data-i18n="uploadAnalyzing">백그라운드 시스템이 이수표를 분석 중입니다...</div>
+                <div class="upload-text-sub" data-i18n="uploadAnalyzingSub">멀티모달 LLM이 강의 코드와 학기를 추출하고 있습니다</div>
+              </div>
+              <div class="upload-zone-done" id="upload-done" style="display: none;">
+                <div class="upload-done-header">
+                  <div>
+                    <div class="upload-done-title" data-i18n="uploadDone">✓ 이수표 분석 완료</div>
+                    <div class="upload-done-sub" id="upload-filename">—</div>
+                  </div>
+                  <button type="button" class="btn-link-small" onclick="resetTranscript()" data-i18n="uploadOther">다른 파일</button>
+                </div>
+                <div class="extracted-courses" id="extracted-courses"></div>
+                <div class="upload-meta" id="upload-meta">—</div>
+              </div>
+            </div>
+            <div class="field-hint" data-i18n="hintTranscript">SAINT 학생정보 → 학적사항 → 과목이수표 출력에서 PDF로 저장 후 업로드. 실제 시스템에서는 멀티모달 LLM이 강의 코드·이수 학기·학점을 자동 추출합니다.</div>
+            <div style="margin-top: 8px;">
+              <button type="button" class="btn-link-small" onclick="toggleManualEntry()" id="manual-toggle" data-i18n="manualToggle">또는 직접 입력하기 ▾</button>
+              <textarea id="f-completed" data-i18n-placeholder="phCompleted" placeholder="CHI2001, CHI2002, CHI2003, ..." style="display: none; margin-top: 8px;"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">
+          <span data-i18n="formOptional">정확도 보완 정보</span>
+          <span class="form-section-sub" data-i18n="formOptionalSub">(있으면 ④⑤ 정밀도 상승)</span>
+        </div>
+        <div class="form-grid">
+          <div class="field field-full">
+            <label data-i18n="lbActivities">비교과·대외활동 이력</label>
+            <textarea id="f-activities" data-i18n-placeholder="phActivities" placeholder=""></textarea>
+          </div>
+          <div class="field field-full">
+            <label data-i18n="lbInternships">인턴 / 프로젝트 경험</label>
+            <textarea id="f-internships" data-i18n-placeholder="phInternships" placeholder=""></textarea>
+          </div>
+          <div class="field">
+            <label data-i18n="lbCerts">보유 자격증·어학 점수</label>
+            <input type="text" id="f-certs" data-i18n-placeholder="phCerts" placeholder="">
+          </div>
+          <div class="field">
+            <label data-i18n="lbIndustries">관심 산업·기업군</label>
+            <input type="text" id="f-industries" data-i18n-placeholder="phIndustries" placeholder="">
+          </div>
+          <div class="field">
+            <label data-i18n="lbRegion">활동 가능 지역</label>
+            <input type="text" id="f-region" data-i18n-placeholder="phRegion" placeholder="">
+          </div>
+          <div class="field">
+            <label data-i18n="lbTime">활동 가능 요일/시간</label>
+            <input type="text" id="f-time" data-i18n-placeholder="phTime" placeholder="">
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <span></span>
+      <div style="display: flex; gap: 12px;">
+        <button class="btn btn-secondary" onclick="closeOnboarding()" data-i18n="btnCancel">취소</button>
+        <button class="btn btn-primary" onclick="saveProfile()" data-i18n="btnSave">저장하고 시작</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   I18N - 한/영 번역
+   ============================================================ */
+const I18N = {
+  kor: {
+    // 헤더 / 유틸
+    visitor: '방문자', editInfo: '내 정보 수정',
+    utilSearch: '검색', utilCommunity: '청년광장', utilSitemap: '사이트 맵',
+    sogangLogo: 'SOGANG',
+    // 학과 (시연용)
+    majorChinese: '중국문화전공', majorAmerican: '미국문화전공', majorEuropean: '유럽문화학과',
+    majorBusiness: '경영학과', majorCS: '컴퓨터공학과', majorEcon: '경제학과', majorPolSci: '정치외교학과',
+    // 네비
+    navDashboard: '대시보드', navPlanner: '졸업 플래너', navRebalance: '학기 재설계',
+    navRecommender: '강의 추천', navOpportunities: '진로 기회', navAlumni: '동문 경로',
+    // 히어로
+    heroTitle: '서강 진로 코파일럿',
+    heroSub: '입학부터 취업까지, 서강 내부 데이터(요람·강의평가·동문 진로)로 움직이는<br>나만의 진로 내비게이션. 5개 모듈이 하나의 학생 궤적을 통합합니다.',
+    // 브레드크럼
+    bcHome: '홈', bcStudentService: '학생 서비스',
+    // 대시보드
+    dashTitle: '대시보드', dashDesc: '입력한 정보를 바탕으로 5개 모듈이 동시에 작동합니다.',
+    emptyTitle: '먼저 정보를 입력해 주세요', emptyDesc: '5개 모듈이 모두 작동하려면 학과·이수 내역·목표 직무 등이 필요합니다.',
+    emptyBtn: '정보 입력하기',
+    statMajor: '학과 / 학번', statCredits: '이수 학점', statRemaining: '잔여 학점', statJob: '목표 직무',
+    unitCredit: '학점',
+    dashNotice: '※ 본 데모는 학교 내부 시스템과 연동되지 않은 <strong>UI 시연용 빌드</strong>입니다. 강의 카탈로그, 동문 진로 통계, 진로 공고 등의 데이터는 백그라운드 시스템(SAINT 강의평가 DB · 취업지원팀 데이터 · 교내 공지 · 요람)과 연동 시 자동으로 채워집니다.',
+    // 모듈 카드
+    mod1Title: '졸업 역산 플래너', mod1Desc: '요람 졸업 요건과 직무 적합도를 동시에 만족시키는 잔여 학기 수강 조합을 산출합니다.',
+    mod2Title: '학기 재설계', mod2Desc: '학기 종료 시점에 이수 결과를 입력하면 남은 학기 계획이 동적으로 갱신됩니다.',
+    mod3Title: '직무 적합도 강의 추천', mod3Desc: '요람 + SAINT 강의평가 데이터를 결합해 목표 직무에 적합한 강의를 정량 지표와 함께 제시합니다.',
+    mod4Title: '진로 기회 큐레이션', mod4Desc: '교내 공지·외부 공모전·대외활동·인턴 공고를 직무 의미 매칭으로 큐레이션합니다.',
+    mod5Title: '동문 진로 경로 패턴', mod5Desc: '최근 5년간 같은 직무로 진출한 서강 졸업생들의 공통 이수 강의·활동·자격증 패턴.',
+    // 모듈별 섹션 제목
+    m1Title: '요람 기반 졸업 역산 플래너', m1Desc: '입학년도 요람과 이수 내역을 바탕으로, 잔여 학기를 짜는 3가지 경로를 산출합니다.',
+    m2Title: '학기별 로드맵 동적 재설계', m2Desc: '학기 결과·신규 활동을 입력하면 남은 학기 계획이 갱신됩니다.',
+    m3Title: 'SAINT 강의평가·요람 연동 직무 적합도 강의 추천', m3Desc: '요람 강의 데이터와 강의평가를 결합해 목표 직무 적합도 순으로 정렬합니다.',
+    m4Title: '직무 매칭 진로 기회 큐레이션', m4Desc: '교내 공지·외부 공모전·대외활동·인턴 공고를 직무 의미 매칭으로 분류합니다.',
+    m5Title: '동문 진로 경로 패턴 분석', m5Desc: '집계형 분석. 개별 매칭이 아닌 N명의 공통 패턴을 보여줍니다.',
+    // 푸터
+    footerLogo: '서강대학교 SOGANG UNIVERSITY',
+    footerLine1: 'Sogang Career Copilot · 2026 서강대학교 생성형 AI 기반 아이디어 공모전 · DEMO',
+    footerLine2: '04107 서울특별시 마포구 백범로 35 · 본 데모는 시연용으로 제작되었습니다',
+    // 모달
+    modalTitle: '내 정보 입력',
+    modalSub: '5개 모듈 작동에 필요한 정보를 입력하세요. 이수 강의는 SAINT에서 다운로드한 과목이수표를 업로드하면 백그라운드 시스템이 자동 추출합니다.',
+    formRequired: '필수 정보', formRequiredSub: '(없으면 모듈 ①②③ 작동 불가)',
+    formOptional: '정확도 보완 정보', formOptionalSub: '(있으면 ④⑤ 정밀도 상승)',
+    lbName: '이름', lbStudentId: '학번 / 입학년도', lbMajor: '본전공 학과', lbTrack: '본전공 경로',
+    lbSecondary: '다전공 짝 학과', lbCurrentYS: '현재 학년 / 학기', lbMilitary: '군 복무',
+    lbCreditsTotal: '누적 이수 학점', lbJob: '목표 직무', lbTranscript: '과목 이수표 업로드',
+    lbActivities: '비교과·대외활동 이력', lbInternships: '인턴 / 프로젝트 경험',
+    lbCerts: '보유 자격증·어학 점수', lbIndustries: '관심 산업·기업군',
+    lbRegion: '활동 가능 지역', lbTime: '활동 가능 요일/시간',
+    phName: '홍길동', phStudentId: '21학번', phSelect: '선택',
+    phJob: '예: 무역 사기업', phCompleted: 'CHI2001, CHI2002, CHI2003, ...',
+    phActivities: '예: 학회 활동, 교환학생 프로그램, ...',
+    phInternships: '예: 무역회사 영업지원 인턴 (3개월), ...',
+    phCerts: 'HSK 5급, OPIc IH, ...',
+    phIndustries: '종합상사, 화학, 무역회사, ...',
+    phRegion: '서울 / 수도권',
+    phTime: '평일 야간, 주말',
+    hintMajor: '현재는 시연용 6개 학과만 노출 · 백엔드 연동 시 요람 DB의 전체 학과로 자동 대체됩니다.',
+    hintTrack: '다전공 선택 시 짝 학과를 추가로 지정합니다',
+    hintSynergy: '짝 학과를 선택하면 본전공과의 시너지를 분석합니다',
+    hintJob: '예: PM, 데이터 엔지니어, 무역 사기업, UX 리서처',
+    hintTranscript: 'SAINT 학생정보 → 학적사항 → 과목이수표 출력에서 PDF로 저장 후 업로드. 실제 시스템에서는 멀티모달 LLM이 강의 코드·이수 학기·학점을 자동 추출합니다.',
+    trackDouble: '다전공', trackCulture: '문화학경로', trackArea: '지역학경로',
+    militaryNone: '해당 없음', militaryDone: '군필', militaryPending: '미필 (휴학 예정)',
+    uploadMain: 'SAINT에서 다운로드한 과목이수표를 업로드하세요',
+    uploadSub: 'PDF · PNG · JPG · OZD 지원 · 최대 10MB',
+    uploadBtn: '파일 선택',
+    uploadAnalyzing: '백그라운드 시스템이 이수표를 분석 중입니다...',
+    uploadAnalyzingSub: '멀티모달 LLM이 강의 코드와 학기를 추출하고 있습니다',
+    uploadDone: '✓ 이수표 분석 완료',
+    uploadOther: '다른 파일',
+    manualToggle: '또는 직접 입력하기 ▾',
+    manualToggleClose: '직접 입력 닫기 ▴',
+    btnCancel: '취소', btnSave: '저장하고 시작',
+    // 백그라운드 placeholder
+    bgBadge: '백그라운드 연동 영역',
+    bgPlannerTitle: '잔여 학기 수강 조합을 백그라운드에서 산출합니다',
+    bgPlannerDesc: '학생의 이수 내역과 목표 직무를 기반으로 요람의 졸업 요건을 결정론적 룰 엔진으로 처리한 뒤, 직무 적합도 점수와 결합해 3가지 잔여 학기 안을 자동 생성합니다.',
+    bgPlannerSource: 'DATA · 서강대 요람 + SAINT 이수 이력 + 직무-강의 매핑 모델',
+    bgRebalanceTitle: '학기 종료 시점에 자동으로 재설계됩니다',
+    bgRebalanceDesc: '학기 성적 발표, 신규 인턴·자격증 등록, 목표 직무 변경 등의 트리거 발생 시 백그라운드 시스템이 잔여 학기 안을 재계산합니다. 학생은 변경 전·후를 비교한 뒤 수락 여부를 직접 결정합니다.',
+    bgRebalanceSource: 'TRIGGER · SAINT 성적 → 활동 등록 → 목표 변경',
+    bgRecommenderTitle: '강의 카탈로그가 백그라운드에서 로드됩니다',
+    bgRecommenderDesc: '요람의 전공·교양 강의 정보, SAINT 강의평가 통계(평점·과제비중·수강생 분포), 그리고 LLM이 산출한 직무 적합도 점수를 결합해 목표 직무 기준 정렬된 카탈로그를 표시합니다.',
+    bgRecommenderSource: 'DATA · 요람 강의 코드 + SAINT 강의평가 + 직무 매핑',
+    bgOpportunitiesTitle: '진로 공고가 백그라운드에서 매칭됩니다',
+    bgOpportunitiesDesc: '교내 취업지원팀·Loyola·커리어센터 공지와 외부 채용·공모전·대외활동 공고를 LLM이 의미 매칭하여 학생의 목표 직무·전공 조합 기준 적합도를 점수화합니다.',
+    bgOpportunitiesSource: 'DATA · 교내 공지 시스템 + 외부 채용 공개 데이터',
+    bgAlumniTitle: '동문 진로 통계가 백그라운드에서 산출됩니다',
+    bgAlumniDesc: '취업지원팀·동문회 보유의 졸업생 진로 데이터를 익명 집계 통계로 가공해 표시합니다. 개별 매칭이 아닌 N명의 공통 패턴이므로 동의·개인정보 부담이 낮습니다.',
+    bgAlumniSource: 'DATA · 취업지원팀 진로 DB + 동문회 합격 이력'
+  },
+  eng: {
+    visitor: 'Guest', editInfo: 'Edit Info',
+    utilSearch: 'Search', utilCommunity: 'Youth Plaza', utilSitemap: 'Sitemap',
+    sogangLogo: 'SOGANG',
+    // Departments (demo-only)
+    majorChinese: 'Chinese Culture', majorAmerican: 'American Culture', majorEuropean: 'European Culture Studies',
+    majorBusiness: 'Business Administration', majorCS: 'Computer Science', majorEcon: 'Economics', majorPolSci: 'Political Science & Diplomacy',
+    navDashboard: 'Dashboard', navPlanner: 'Planner', navRebalance: 'Rebalance',
+    navRecommender: 'Courses', navOpportunities: 'Opportunities', navAlumni: 'Alumni Path',
+    heroTitle: 'Sogang Career Copilot',
+    heroSub: 'From admission to employment, your personal career navigator powered by Sogang internal data<br>(Curriculum · Course Evaluations · Alumni Paths). Five modules unify a single student trajectory.',
+    bcHome: 'Home', bcStudentService: 'Student Services',
+    dashTitle: 'Dashboard', dashDesc: 'Five modules operate simultaneously based on the information you provide.',
+    emptyTitle: 'Please enter your information first', emptyDesc: 'Department, course history, and target role are required for all five modules to operate.',
+    emptyBtn: 'Enter Information',
+    statMajor: 'Department / ID', statCredits: 'Earned Credits', statRemaining: 'Remaining Credits', statJob: 'Target Role',
+    unitCredit: 'cr',
+    dashNotice: '※ This is a <strong>UI demonstration build</strong> not connected to internal university systems. Course catalogs, alumni statistics, and career postings will be auto-populated when integrated with backend systems (SAINT course evaluation DB · Career Center data · campus notices · curriculum).',
+    mod1Title: 'Backward Graduation Planner', mod1Desc: 'Generates remaining-semester course combinations that satisfy curriculum requirements and role-fit simultaneously.',
+    mod2Title: 'Dynamic Rebalance', mod2Desc: 'When semester results are entered, remaining-semester plans are dynamically updated.',
+    mod3Title: 'Role-Fit Course Recommender', mod3Desc: 'Combines curriculum data with SAINT course evaluations to present role-relevant courses with quantitative metrics.',
+    mod4Title: 'Opportunity Curation', mod4Desc: 'Curates campus notices, external competitions, extracurriculars, and internship listings via semantic role matching.',
+    mod5Title: 'Alumni Path Pattern', mod5Desc: 'Common course-activity-certification patterns of Sogang graduates who entered the same role over the past 5 years.',
+    m1Title: 'Curriculum-Based Backward Graduation Planner', m1Desc: 'Based on admission-year curriculum and course history, generates 3 paths for remaining semesters.',
+    m2Title: 'Dynamic Semester Rebalance', m2Desc: 'When semester results or new activities are entered, remaining-semester plans are updated.',
+    m3Title: 'SAINT Course Evaluation × Curriculum-Linked Role-Fit Recommender', m3Desc: 'Combines curriculum course data with course evaluations, sorted by target role-fit.',
+    m4Title: 'Role-Matched Opportunity Curation', m4Desc: 'Classifies campus notices, external competitions, extracurriculars, and internships via semantic role matching.',
+    m5Title: 'Alumni Path Pattern Analysis', m5Desc: 'Aggregate analysis. Shows common patterns of N alumni rather than individual matches.',
+    footerLogo: 'SOGANG UNIVERSITY',
+    footerLine1: 'Sogang Career Copilot · 2026 Sogang University Generative-AI Idea Competition · DEMO',
+    footerLine2: '35 Baekbeom-ro, Mapo-gu, Seoul 04107 · This demo is for demonstration purposes only',
+    modalTitle: 'Enter Your Information',
+    modalSub: 'Provide the information needed for the five modules to operate. For completed courses, upload your transcript downloaded from SAINT and the backend will auto-extract.',
+    formRequired: 'Required Information', formRequiredSub: '(Without this, modules ①②③ cannot operate)',
+    formOptional: 'Precision Boost Information', formOptionalSub: '(With this, modules ④⑤ become more precise)',
+    lbName: 'Name', lbStudentId: 'Student ID / Admission Year', lbMajor: 'Primary Major', lbTrack: 'Primary Major Track',
+    lbSecondary: 'Double Major Pair', lbCurrentYS: 'Current Year / Semester', lbMilitary: 'Military Service',
+    lbCreditsTotal: 'Cumulative Credits', lbJob: 'Target Role', lbTranscript: 'Transcript Upload',
+    lbActivities: 'Extracurricular / Co-curricular History', lbInternships: 'Internship / Project Experience',
+    lbCerts: 'Certifications / Language Scores', lbIndustries: 'Industries / Companies of Interest',
+    lbRegion: 'Available Regions', lbTime: 'Available Days/Hours',
+    phName: 'John Doe', phStudentId: 'Class of 2021', phSelect: 'Select',
+    phJob: 'e.g., Trading Company', phCompleted: 'CHI2001, CHI2002, CHI2003, ...',
+    phActivities: 'e.g., Academic society, exchange program, ...',
+    phInternships: 'e.g., Trading firm sales-support intern (3 months), ...',
+    phCerts: 'HSK Level 5, OPIc IH, ...',
+    phIndustries: 'General trading, chemicals, trading firms, ...',
+    phRegion: 'Seoul / Metro area',
+    phTime: 'Weekday evenings, weekends',
+    hintMajor: 'Demo build shows 6 sample departments · Will be auto-replaced with full Curriculum DB upon backend integration.',
+    hintTrack: 'Selecting Double Major requires specifying a paired department',
+    hintSynergy: 'Selecting a paired department analyzes synergy with your primary major',
+    hintJob: 'e.g., PM, Data Engineer, Trading Firm, UX Researcher',
+    hintTranscript: 'In SAINT: Student Info → Academic Records → Print Transcript, save as PDF, then upload. In production, a multimodal LLM auto-extracts course codes, semester, and credits.',
+    trackDouble: 'Double Major', trackCulture: 'Culture Track', trackArea: 'Area Studies Track',
+    militaryNone: 'N/A', militaryDone: 'Completed', militaryPending: 'Pending (will take leave)',
+    uploadMain: 'Upload your transcript downloaded from SAINT',
+    uploadSub: 'PDF · PNG · JPG · OZD supported · Max 10MB',
+    uploadBtn: 'Choose File',
+    uploadAnalyzing: 'Backend system is analyzing your transcript...',
+    uploadAnalyzingSub: 'Multimodal LLM is extracting course codes and semesters',
+    uploadDone: '✓ Transcript Analysis Complete',
+    uploadOther: 'Other File',
+    manualToggle: 'Or enter manually ▾',
+    manualToggleClose: 'Close manual entry ▴',
+    btnCancel: 'Cancel', btnSave: 'Save & Start',
+    bgBadge: 'Backend Integration Area',
+    bgPlannerTitle: 'Remaining-semester combinations are computed by the backend',
+    bgPlannerDesc: 'Based on student course history and target role, the backend processes curriculum graduation requirements via a deterministic rule engine, then combines with role-fit scores to auto-generate 3 remaining-semester plans.',
+    bgPlannerSource: 'DATA · Sogang Curriculum + SAINT Course History + Role-Course Mapping Model',
+    bgRebalanceTitle: 'Auto-rebalanced at semester end',
+    bgRebalanceDesc: 'When triggers fire (semester grades published, new internship/certification registered, target role changed), the backend recomputes remaining-semester plans. Students compare before/after and decide whether to accept.',
+    bgRebalanceSource: 'TRIGGER · SAINT grades → activity registration → goal change',
+    bgRecommenderTitle: 'Course catalog loaded from backend',
+    bgRecommenderDesc: 'The backend combines curriculum course data, SAINT course evaluation statistics (rating, workload, enrollment distribution), and LLM-generated role-fit scores to display a catalog sorted by target role.',
+    bgRecommenderSource: 'DATA · Curriculum Course Codes + SAINT Evaluations + Role Mapping',
+    bgOpportunitiesTitle: 'Career postings matched by backend',
+    bgOpportunitiesDesc: "Campus Career Center / Loyola / Career Center notices and external job-postings/competitions/extracurriculars are semantically matched by an LLM to score relevance against the student's target role and major.",
+    bgOpportunitiesSource: 'DATA · Campus notice systems + external job-posting public data',
+    bgAlumniTitle: 'Alumni statistics computed by backend',
+    bgAlumniDesc: 'Alumni career data held by Career Center and alumni associations is processed into anonymized aggregate statistics. Since these are common patterns of N alumni rather than individual matches, consent and privacy burden is low.',
+    bgAlumniSource: 'DATA · Career Center career DB + Alumni Association admission records'
+  }
+};
+
+let currentLang = 'kor';
+function t(key) { return I18N[currentLang][key] !== undefined ? I18N[currentLang][key] : key; }
+
+function setLang(lang) {
+  if (lang !== 'kor' && lang !== 'eng') return;
+  currentLang = lang;
+  document.documentElement.lang = (lang === 'kor') ? 'ko' : 'en';
+  document.getElementById('lang-kor').classList.toggle('active', lang === 'kor');
+  document.getElementById('lang-eng').classList.toggle('active', lang === 'eng');
+  applyTranslations();
+  refreshGreeting();
+  refreshDate();
+  refreshBreadcrumb();
+  if (profile) {
+    renderDashboard();
+    renderPlanner();
+    renderRebalance();
+    renderRecommender();
+    renderOpportunities();
+    renderAlumni();
+  } else {
+    renderPlannerEmpty();
+    renderRebalanceEmpty();
+    renderRecommenderEmpty();
+    renderOpportunitiesEmpty();
+    renderAlumniEmpty();
+  }
+  // 추출 강의 placeholder 메시지도 갱신
+  if (extractedCourses.length === 0 && document.getElementById('upload-done').style.display === 'block') {
+    document.getElementById('upload-meta').textContent = currentLang === 'kor'
+      ? '백그라운드 시스템 연동 시 강의 코드·이수 학기·학점이 자동으로 추출되어 여기에 표시됩니다.'
+      : 'Upon backend integration, course codes, semesters, and credits will be auto-extracted and displayed here.';
+  }
+  renderExtractedCourses();
+  // manual toggle 버튼 텍스트 갱신
+  const mt = document.getElementById('manual-toggle');
+  if (mt) {
+    mt.textContent = (document.getElementById('f-completed').style.display === 'block')
+      ? t('manualToggleClose') : t('manualToggle');
+  }
+}
+
+function applyTranslations() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    el.innerHTML = t(el.dataset.i18nHtml);
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const v = t(el.dataset.i18nPlaceholder);
+    if (v) el.placeholder = v;
+  });
+  document.querySelectorAll('option[data-i18n-key]').forEach(el => {
+    el.textContent = t(el.dataset.i18nKey);
+  });
+}
+
+/* ============================================================
+   상수 (학교 정책 / UI 라벨) — 변경 시 백엔드 정책 DB와 동기화
+   ============================================================ */
+// ── 학과별 이수 경로 + 졸업학점 (2025학년도 서강대 요람 기준) ──
+const DEPT_TRACKS = {
+  '국어국문학과':       [{v:'다전공',    l:'다전공',    tc:130,mc:36}, {v:'심화전공',  l:'심화전공',  tc:130,mc:45}, {v:'실용전공',  l:'실용전공',  tc:130,mc:48}, {v:'교직과정',  l:'교직과정',  tc:130,mc:54}],
+  '사학과':             [{v:'다전공',    l:'다전공',    tc:130,mc:36}, {v:'심화전공',  l:'심화전공',  tc:130,mc:48}, {v:'실용전공',  l:'실용전공',  tc:130,mc:48}, {v:'교직과정',  l:'교직과정',  tc:130,mc:53}],
+  '철학과':             [{v:'다전공',    l:'다전공',    tc:130,mc:36}, {v:'심화전공',  l:'심화전공',  tc:130,mc:48}, {v:'실용전공',  l:'실용전공',  tc:130,mc:45}, {v:'교직과정',  l:'교직과정',  tc:130,mc:51}],
+  '종교학과':           [{v:'다전공',    l:'다전공',    tc:130,mc:36}, {v:'심화전공',  l:'심화전공',  tc:130,mc:45}, {v:'실용전공',  l:'실용전공',  tc:130,mc:45}, {v:'교직과정',  l:'교직과정',  tc:130,mc:51}],
+  '영미어문전공':       [{v:'다전공',    l:'다전공',    tc:130,mc:36}, {v:'심화전공',  l:'심화전공',  tc:130,mc:48}, {v:'실용전공',  l:'실용전공',  tc:130,mc:48}, {v:'교직과정',  l:'교직과정',  tc:130,mc:51}],
+  '미국문화전공':       [{v:'다전공',    l:'다전공',    tc:130,mc:36}, {v:'문화학전공',l:'문화학전공',tc:130,mc:48}, {v:'지역학전공',l:'지역학전공',tc:130,mc:48}, {v:'교직과정',  l:'교직과정',  tc:130,mc:51}],
+  '유럽문화학과':       [{v:'다전공',    l:'다전공',    tc:130,mc:36}, {v:'심화전공',  l:'심화전공',  tc:130,mc:48}, {v:'교직과정',  l:'교직과정',  tc:130,mc:51}],
+  '중국문화학과':       [{v:'다전공',    l:'다전공',    tc:130,mc:36}, {v:'문화학전공',l:'문화학전공',tc:130,mc:48}, {v:'지역학전공',l:'지역학전공',tc:130,mc:48}, {v:'교직과정',  l:'교직과정',  tc:130,mc:57}],
+  '인문학기반 자유전공학부': [{v:'자유전공',l:'자유전공(1학년 말 전공 선택)',tc:130,mc:0}],
+  '사회학과':           [{v:'다전공',    l:'다전공',    tc:126,mc:36}, {v:'단일전공',  l:'단일전공',  tc:126,mc:48}],
+  '정치외교학과':       [{v:'다전공',    l:'다전공',    tc:126,mc:36}, {v:'단일전공',  l:'단일전공',  tc:126,mc:42}],
+  '심리학과':           [{v:'다전공',    l:'다전공',    tc:126,mc:36}, {v:'단일전공',  l:'단일전공',  tc:126,mc:48}, {v:'교직과정',  l:'교직과정',  tc:126,mc:50}],
+  '수학과':             [{v:'다전공(수학주전공)',    l:'다전공(수학 주전공)',    tc:130,mc:45}, {v:'다전공(타전공주전공)',l:'다전공(타전공 주전공)',tc:130,mc:45}, {v:'단일전공',  l:'단일전공',  tc:130,mc:54}, {v:'교직과정',  l:'교직과정',  tc:130,mc:51}],
+  '물리학과':           [{v:'다전공',    l:'다전공',    tc:130,mc:47}, {v:'단일전공',  l:'단일전공',  tc:130,mc:60}, {v:'교직과정',  l:'교직과정',  tc:130,mc:60}],
+  '화학과':             [{v:'다전공',    l:'다전공',    tc:130,mc:45}, {v:'단일전공',  l:'단일전공',  tc:130,mc:64}, {v:'교직과정',  l:'교직과정',  tc:130,mc:54}],
+  '생명과학과':         [{v:'다전공',    l:'다전공',    tc:130,mc:36}, {v:'단일전공',  l:'단일전공',  tc:130,mc:62}, {v:'교직과정',  l:'교직과정',  tc:130,mc:65}],
+  'SCIENCE기반 자유전공학부': [{v:'자유전공',l:'자유전공(1학년 말 전공 선택)',tc:130,mc:0}],
+  '전자공학과':         [{v:'다전공(전자주전공)',    l:'다전공(전자공 주전공)',   tc:130,mc:45}, {v:'다전공(타전공주전공)',l:'다전공(타전공 주전공)',tc:130,mc:39}, {v:'단일전공심화',l:'단일전공(심화)',       tc:130,mc:71}],
+  '화공생명공학과':     [{v:'다전공',    l:'다전공',    tc:130,mc:39}, {v:'심화전공',  l:'심화전공',  tc:130,mc:81}],
+  '기계공학과':         [{v:'다전공(기계주전공)',    l:'다전공(기계공 주전공)',   tc:130,mc:51}, {v:'다전공(타전공주전공)',l:'다전공(타전공 주전공)',tc:130,mc:45}, {v:'심화전공',  l:'심화전공',  tc:130,mc:72}],
+  '시스템반도체공학과': [{v:'다전공(시반공주전공-취업)',l:'다전공(시반공 주전공·취업)',tc:140,mc:84}, {v:'다전공(시반공주전공-미취업)',l:'다전공(시반공 주전공·미취업)',tc:140,mc:45}, {v:'다전공(타전공주전공)',l:'다전공(타전공 주전공)',tc:140,mc:72}, {v:'단일전공',l:'단일전공',tc:140,mc:84}],
+  '컴퓨터공학과':       [{v:'단일전공심화',l:'단일전공(심화)',       tc:130,mc:110},{v:'다전공(컴공주전공)',l:'다전공(컴공 주전공)',  tc:130,mc:74},  {v:'다전공(인공지능주전공)',l:'다전공(인공지능 주전공)',tc:130,mc:65}, {v:'다전공(타전공주전공)',l:'다전공(타전공 주전공)',tc:130,mc:65}, {v:'교직과정',l:'교직과정',tc:130,mc:96}],
+  '인공지능학과':       [{v:'단일전공',  l:'단일전공',  tc:130,mc:75}, {v:'다전공(인공지능주전공)',l:'다전공(인공지능 주전공)',tc:130,mc:54},{v:'다전공(컴공주전공)',l:'다전공(컴공 주전공)',tc:130,mc:39},{v:'다전공(타전공주전공)',l:'다전공(타전공 주전공)',tc:130,mc:39}],
+  'AI기반 자유전공학부':  [{v:'자유전공',l:'자유전공(1학년 말 전공 선택)',tc:130,mc:0}],
+  '경제학과':           [{v:'다전공',    l:'다전공',    tc:126,mc:39}, {v:'단일전공',  l:'단일전공',  tc:126,mc:45}],
+  '경영학부':           [{v:'단일전공',  l:'단일전공',  tc:126,mc:51}, {v:'다전공(경영주전공)',l:'다전공(경영 주전공)',tc:126,mc:39},{v:'다전공(타전공주전공)',l:'다전공(타전공 주전공)',tc:126,mc:39}],
+  '신문방송학과':       [{v:'단일전공',  l:'단일전공',  tc:130,mc:45}, {v:'다전공(신방주전공)',l:'다전공(신방 주전공)',tc:130,mc:39},{v:'다전공(타전공주전공)',l:'다전공(타전공 주전공)',tc:130,mc:39}],
+  '미디어&엔터테인먼트학과':[{v:'단일전공',l:'단일전공',tc:130,mc:42},{v:'다전공(미엔주전공)',l:'다전공(미엔 주전공)',tc:130,mc:36},{v:'다전공(타전공주전공)',l:'다전공(타전공 주전공)',tc:130,mc:36}],
+  'Art & Technology':   [{v:'단일전공',  l:'단일전공',  tc:130,mc:42}, {v:'다전공(아텍주전공)',l:'다전공(아텍 주전공)',tc:130,mc:36},{v:'다전공(타전공주전공)',l:'다전공(타전공 주전공)',tc:130,mc:36}],
+  'Global Korean Studies':[{v:'지융미_단일전공',l:'지융미 글로벌한국학 단일전공',tc:130,mc:42},{v:'지융미_다전공',l:'지융미 글로벌한국학 다전공',tc:130,mc:36},{v:'국내_단일전공',l:'영어트랙 국내학생 단일전공',tc:130,mc:42},{v:'국내_다전공',l:'영어트랙 국내학생 다전공',tc:130,mc:36},{v:'국제_단일전공',l:'영어트랙 국제학생 단일전공',tc:130,mc:42},{v:'국제_다전공',l:'영어트랙 국제학생 다전공',tc:130,mc:36}],
+  '한국어교육전공':     [{v:'단일전공_자격증취득',l:'단일전공(자격증 취득)',tc:130,mc:45},{v:'다전공_자격증취득',l:'다전공(자격증 취득)',tc:130,mc:45},{v:'다전공_자격증미취득',l:'다전공(자격증 미취득)',tc:130,mc:36}],
+  'International Relations':[{v:'국내_단일전공',l:'영어트랙 국내학생 단일전공',tc:126,mc:45},{v:'국내_다전공',l:'영어트랙 국내학생 다전공',tc:126,mc:39},{v:'국제_단일전공',l:'영어트랙 국제학생 단일전공',tc:126,mc:45},{v:'국제_다전공',l:'영어트랙 국제학생 다전공',tc:126,mc:39}],
+  'International Commerce':[{v:'국내_단일전공',l:'영어트랙 국내학생 단일전공',tc:126,mc:45},{v:'국내_다전공(경제)',l:'국내 다전공(+경제학)',tc:126,mc:39},{v:'국내_다전공(경영)',l:'국내 다전공(+경영학)',tc:126,mc:39},{v:'국내_다전공(타과)',l:'국내 다전공(+타학과)',tc:126,mc:39},{v:'국제_단일전공',l:'영어트랙 국제학생 단일전공',tc:126,mc:45},{v:'국제_다전공',l:'영어트랙 국제학생 다전공',tc:126,mc:39}],
+  'Asian Studies':      [{v:'국내_단일전공',l:'영어트랙 국내학생 단일전공',tc:126,mc:45},{v:'국내_다전공',l:'영어트랙 국내학생 다전공',tc:126,mc:36},{v:'국제_단일전공',l:'영어트랙 국제학생 단일전공',tc:126,mc:45},{v:'국제_다전공',l:'영어트랙 국제학생 다전공',tc:126,mc:36}],
+  '글로벌경제전공':     [{v:'단일전공',  l:'단일전공',  tc:126,mc:42}],
+  '글로벌경영전공':     [{v:'단일전공',  l:'단일전공',  tc:126,mc:42}],
+  '글로벌미디어전공':   [{v:'단일전공',  l:'단일전공',  tc:126,mc:42}],
+};
+
+// 학과 변경 시 경로 드롭다운 동적 업데이트
+function onMajorChange() {
+  const major = document.getElementById('f-major').value;
+  const trackSel = document.getElementById('f-track');
+  trackSel.innerHTML = '';
+  if (!major || !DEPT_TRACKS[major]) {
+    trackSel.innerHTML = '<option value="">— 학과를 먼저 선택하세요 —</option>';
+    document.getElementById('f-secondary-wrapper').style.display = 'none';
+    const _tw = document.getElementById('f-third-wrapper'); if(_tw) _tw.style.display='none';
+    return;
+  }
+  let html = '<option value="">— 이수 경로 선택 —</option>';
+  DEPT_TRACKS[major].forEach(t => {
+    html += '<option value="' + t.v + '">' + t.l + '</option>';
+  });
+  trackSel.innerHTML = html;
+  document.getElementById('f-secondary-wrapper').style.display = 'none';
+}
+
+// 졸업학점 조회 (major + track 조합)
+function getGradReq(major, track) {
+  const tracks = DEPT_TRACKS[major] || [];
+  const found = tracks.find(t => t.v === track);
+  if (found) return { totalReq: found.tc, majorReq: found.mc };
+  return { totalReq: 130, majorReq: 36 };
+}
+
+// dropdown value(한국어 키) → 화면 표시 라벨
+function trackLabel(v) {
+  if (!profile || !profile.major) return v || '—';
+  const tracks = DEPT_TRACKS[profile.major] || [];
+  const found = tracks.find(t => t.v === v);
+  return found ? found.l : (v || '—');
+}
+function majorLabel(v) { return v || '—'; }
+
+
+/* ============================================================
+   비어 있는 데이터 구조 (백그라운드 시스템에서 채워짐)
+   ============================================================ */
+const COURSES_BASE = [];
+const COURSES_GENERAL = [];
+const COURSES_CULTURE = [];
+const COURSES_AREA = [];
+const SECONDARY_DEPTS = {};
+const SAMPLE_OPPORTUNITIES = [];
+const OPPORTUNITIES_BY_SECONDARY = {};
+const ALUMNI_PATTERN = { count: 0, yearRange: '', avgGpa: 0, topCompanies: [], courses: [], certs: [], activities: [] };
+const ALUMNI_BY_SECONDARY = {};
+const SYNERGY_MAP = {};
+
+/* ============================================================
+   상태
+   ============================================================ */
+let profile = null;
+
+/* ============================================================
+   Onboarding
+   ============================================================ */
+function openOnboarding() {
+  document.getElementById('onboarding').classList.add('show');
+  if (profile) {
+    document.getElementById('f-name').value = profile.name || '';
+    document.getElementById('f-studentId').value = profile.studentId || '';
+    document.getElementById('f-major').value = profile.major || '';
+    onMajorChange();
+    document.getElementById('f-track').value = profile.track || '';
+    document.getElementById('f-secondaryMajor').value = profile.secondaryMajor || '';
+    if (profile.thirdMajor) {
+      toggleThirdMajor(true);
+      document.getElementById('f-thirdMajor').value = profile.thirdMajor;
+    } else {
+      toggleThirdMajor(false);
+    }
+    onTrackChange();
+    document.getElementById('f-currentYS').value = profile.currentYS || '';
+    document.getElementById('f-military').value = profile.military || '해당없음';
+    document.getElementById('f-credits').value = profile.credits || '';
+    document.getElementById('f-job').value = profile.job || '';
+    document.getElementById('f-completed').value = profile.completed || '';
+    document.getElementById('f-activities').value = profile.activities || '';
+    document.getElementById('f-internships').value = profile.internships || '';
+    document.getElementById('f-certs').value = profile.certs || '';
+    document.getElementById('f-industries').value = profile.industries || '';
+    document.getElementById('f-region').value = profile.region || '';
+    document.getElementById('f-time').value = profile.time || '';
+    // 신규 필드 복원
+    if (document.getElementById('f-teacherCert'))
+      document.getElementById('f-teacherCert').checked = profile.hasTeacherCert || false;
+    if (document.getElementById('f-bsms'))
+      document.getElementById('f-bsms').checked = profile.hasBSMS || false;
+  }
+}
+
+function closeOnboarding() {
+  document.getElementById('onboarding').classList.remove('show');
+}
+
+function onTrackChange() {
+  const track = document.getElementById('f-track').value;
+  const parsed = parseTrackValue(track);
+  const wrapper = document.getElementById('f-secondary-wrapper');
+  const thirdWrapper = document.getElementById('f-third-wrapper');
+  if (track && parsed.enrollType === '다전공') {
+    wrapper.style.display = 'flex';
+    updateMajorHints();
+  } else {
+    wrapper.style.display = 'none';
+    // 다전공 해제 시 제 3전공도 초기화
+    if (thirdWrapper) thirdWrapper.style.display = 'none';
+    const tm = document.getElementById('f-thirdMajor');
+    if (tm) tm.value = '';
+  }
+}
+
+function toggleThirdMajor(show) {
+  const wrapper = document.getElementById('f-third-wrapper');
+  const btn = document.getElementById('btn-add-third');
+  if (show) {
+    wrapper.style.display = 'flex';
+    if (btn) btn.style.display = 'none';
+  } else {
+    wrapper.style.display = 'none';
+    if (btn) btn.style.display = 'inline-block';
+    const tm = document.getElementById('f-thirdMajor');
+    if (tm) tm.value = '';
+    updateMajorHints();
+  }
+}
+
+
+function updateMajorHints() {
+  const sec   = document.getElementById('f-secondaryMajor').value;
+  const third = document.getElementById('f-thirdMajor') ? document.getElementById('f-thirdMajor').value : '';
+  const hint  = document.getElementById('major-hint');
+  if (!hint) return;
+  const parts = [sec, third].filter(Boolean);
+  if (!parts.length) { hint.textContent = ''; return; }
+  hint.textContent = '✓ 선택된 다전공: ' + parts.join(' + ');
+}
+
+// ── 학과 IRI 매핑 (data_round4_scenario 동기화) ──────────────
+const DEPT_IRI_MAP = {
+  '국어국문학과':'Dept_KOR','사학과':'Dept_HIS','철학과':'Dept_PHI','종교학과':'Dept_REL',
+  '영미어문전공':'Dept_ENG','미국문화전공':'Dept_AMC','유럽문화학과':'Dept_EUR','중국문화학과':'Dept_CHI',
+  '인문학기반 자유전공학부':'Dept_FREE_HUM','사회학과':'Dept_SOC','정치외교학과':'Dept_POL',
+  '심리학과':'Dept_PSY','수학과':'Dept_MAT','물리학과':'Dept_PHY','화학과':'Dept_CHM',
+  '생명과학과':'Dept_BIO','SCIENCE기반 자유전공학부':'Dept_FREE_SCI',
+  '전자공학과':'Dept_EEE','화공생명공학과':'Dept_CBE','기계공학과':'Dept_MEE',
+  '시스템반도체공학과':'Dept_SSE','컴퓨터공학과':'Dept_CSE','인공지능학과':'Dept_AIE',
+  'AI기반 자유전공학부':'Dept_FREE_AI','경제학과':'Dept_ECO','경영학부':'Dept_MGT',
+  '신문방송학과':'Dept_JAS','미디어&엔터테인먼트학과':'Dept_MAE','Art & Technology':'Dept_AAT',
+  'Global Korean Studies':'Dept_GKS','한국어교육전공':'Dept_GKE',
+  'International Relations':'Dept_TIR','International Commerce':'Dept_TIC',
+  'Asian Studies':'Dept_AAS','글로벌경제전공':'Dept_GIS','글로벌경영전공':'Dept_GMT',
+  '글로벌미디어전공':'Dept_GME',
+};
+
+// DEPT_TRACKS의 v 값 → {enrollType, role, specialCond, track} 파싱
+function parseTrackValue(v) {
+  if (!v) return { enrollType:'단일전공', role:'주전공', specialCond:'', track:'' };
+  let et='단일전공', role='주전공', sc='', tr='';
+  // enrollType: '다전공'이 값 어디에든 포함되어 있으면 다전공
+  if (v.includes('심화') || v==='단일전공심화') et='심화전공';
+  else if (v.includes('실용'))                  et='실용전공';
+  else if (v.includes('다전공'))                et='다전공';   // startsWith → includes로 확장
+  else if (v.includes('교직'))                  et='교직과정';
+  else if (v.includes('자유전공'))              et='자유전공';
+  // role
+  if (v.includes('타전공주전공')) role='타전공주전공';
+  // specialCond
+  if (v.includes('-취업') || (v.includes('취업') && !v.includes('미취업'))) sc='취업';
+  else if (v.includes('미취업'))                sc='미취업';
+  else if (v.includes('자격증취득') && !v.includes('미취득')) sc='자격증취득';
+  else if (v.includes('자격증미취득'))          sc='자격증미취득';
+  // track: International Commerce 복합 트랙 처리
+  const icMatch = v.match(/국내_다전공\(([^)]+)\)/);
+  if (icMatch)                   tr='국내_' + icMatch[1];
+  else if (v.includes('지역학')) tr='지역학';
+  else if (v.includes('문화학')) tr='문화학';
+  else if (v.includes('지융미')) tr='지융미';
+  else if (v.includes('국내'))   tr='국내';
+  else if (v.includes('국제'))   tr='국제';
+  return { enrollType:et, role, specialCond:sc, track:tr };
+}
+
+function saveProfile() {
+  const major           = document.getElementById('f-major').value;
+  const trackV          = document.getElementById('f-track').value;
+  const secondaryMajor  = document.getElementById('f-secondaryMajor').value;
+  const thirdMajor      = (document.getElementById('f-thirdMajor') &&
+                           document.getElementById('f-thirdMajor').value) || '';
+  const hasTeacherCert  = document.getElementById('f-teacherCert')?.checked || false;
+  const hasBSMS         = document.getElementById('f-bsms')?.checked || false;
+
+  // MajorEntry 배열 구성
+  const parsed = parseTrackValue(trackV);
+  const majors = [];
+  if (major) {
+    majors.push({
+      dept:        major,
+      deptIri:     DEPT_IRI_MAP[major] || '',
+      enrollType:  parsed.enrollType,
+      role:        parsed.role,
+      track:       parsed.track,
+      specialCond: parsed.specialCond,
+      order:       1,
+    });
+  }
+  if (secondaryMajor) {
+    majors.push({
+      dept:       secondaryMajor,
+      deptIri:    DEPT_IRI_MAP[secondaryMajor] || '',
+      enrollType: '다전공',
+      role:       '타전공주전공',
+      track:      '',
+      specialCond:'',
+      order:      2,
+    });
+  }
+  if (thirdMajor) {
+    majors.push({
+      dept:       thirdMajor,
+      deptIri:    DEPT_IRI_MAP[thirdMajor] || '',
+      enrollType: '다전공',
+      role:       '타전공주전공',
+      track:      '',
+      specialCond:'',
+      order:      3,
+    });
+  }
+
+  profile = {
+    // ── 구 필드 유지 (하위 호환) ──────────────────────────────
+    name:          document.getElementById('f-name').value.trim() || (currentLang === 'kor' ? '학생' : 'Student'),
+    studentId:     document.getElementById('f-studentId').value.trim(),
+    major,
+    track:         trackV,
+    secondaryMajor,
+    thirdMajor,
+    currentYS:     document.getElementById('f-currentYS').value,
+    military:      document.getElementById('f-military').value,
+    credits:       parseInt(document.getElementById('f-credits').value) || 0,
+    job:           document.getElementById('f-job').value.trim() || (currentLang === 'kor' ? '미정' : 'Undecided'),
+    completed:     document.getElementById('f-completed').value.trim(),
+    activities:    document.getElementById('f-activities').value.trim(),
+    internships:   document.getElementById('f-internships').value.trim(),
+    certs:         document.getElementById('f-certs').value.trim(),
+    industries:    document.getElementById('f-industries').value.trim(),
+    region:        document.getElementById('f-region').value.trim(),
+    time:          document.getElementById('f-time').value.trim(),
+    // ── 신규 MajorEntry 구조 ─────────────────────────────────
+    majors,
+    hasTeacherCert,
+    hasBSMS,
+  };
+  closeOnboarding();
+  afterProfileSet();
+}
+
+async function afterProfileSet() {
+  refreshGreeting();
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('dashboard-content').style.display = 'block';
+  // 대시보드: API 우선, 실패 시 클라이언트 fallback
+  try {
+    const data = await apiFetch('/api/profile', { profile: buildPayload() });
+    applyDashboardData(data);
+  } catch(e) {
+    renderDashboard(); // fallback: 클라이언트 계산
+  }
+  renderPlanner();
+  renderRebalance();
+  renderRecommender();
+  renderOpportunities();
+  renderAlumni();
+}
+
+function applyDashboardData(data) {
+  if (!data) return;
+  const creditUnit = document.querySelector('#d-remaining + .unit');
+  document.getElementById('d-major').textContent       = data.d_major || '—';
+  document.getElementById('d-id').textContent          = data.d_id   || '—';
+  document.getElementById('d-credits').textContent     = data.d_credits ?? '—';
+  document.getElementById('d-credits-pct').textContent = data.d_credits_pct || '—';
+  document.getElementById('d-remaining').textContent   = data.d_remaining ?? '—';
+  document.getElementById('d-remaining-sub').textContent = data.d_remaining_sub || '—';
+  document.getElementById('d-job').textContent         = data.d_job   || '—';
+  document.getElementById('d-track').textContent       = data.d_track || '—';
+}
+
+
+/* ============================================================
+   탭 전환
+   ============================================================ */
+function refreshBreadcrumb() {
+  const activeTab = document.querySelector('.sg-nav-tab.active');
+  if (!activeTab) return;
+  const sec = activeTab.dataset.section;
+  const keyMap = {
+    dashboard: 'navDashboard', planner: 'navPlanner', rebalance: 'navRebalance',
+    recommender: 'navRecommender', opportunities: 'navOpportunities', alumni: 'navAlumni'
+  };
+  const bc = document.getElementById('bc-current');
+  if (bc) bc.textContent = t(keyMap[sec] || 'navDashboard');
+}
+
+function switchTab(target) {
+  document.querySelectorAll('.sg-nav-tab').forEach(tab => tab.classList.remove('active'));
+  document.querySelector('.sg-nav-tab[data-section="' + target + '"]').classList.add('active');
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById(target).classList.add('active');
+  refreshBreadcrumb();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+document.querySelectorAll('.sg-nav-tab').forEach(tab => {
+  tab.addEventListener('click', () => switchTab(tab.dataset.section));
+});
+
+/* ============================================================
+   Dashboard
+   ============================================================ */
+function renderDashboard() {
+  if (!profile) return;
+  const req = getGradReq(profile.major, profile.track);
+  const remaining = Math.max(0, req.totalReq - profile.credits);
+  const pct = Math.round((profile.credits / req.totalReq) * 100);
+
+  let majorText = majorLabel(profile.major);
+  if (profile.track && profile.track.includes('다전공')) {
+    const extras = [profile.secondaryMajor, profile.thirdMajor].filter(Boolean);
+    if (extras.length) majorText += ' + ' + extras.join(' + ');
+  }
+  document.getElementById('d-major').textContent = majorText;
+  let ysText = '';
+  if (profile.currentYS) {
+    const parts = profile.currentYS.split('-');
+    if (currentLang === 'kor') {
+      ysText = parts[0] + '학년 ' + parts[1] + '학기';
+    } else {
+      ysText = 'Year ' + parts[0] + ', Semester ' + parts[1];
+    }
+  }
+  document.getElementById('d-id').textContent = (profile.studentId || '—') + (ysText ? ' · ' + ysText : '');
+  document.getElementById('d-credits').textContent = profile.credits;
+  document.getElementById('d-credits-pct').textContent = pct + (currentLang === 'kor' ? '% 진행' : '% complete');
+  document.getElementById('d-remaining').textContent = remaining;
+  document.getElementById('d-remaining-sub').textContent = currentLang === 'kor' ? '졸업까지 남은 학점' : 'Credits remaining to graduate';
+  document.getElementById('d-job').textContent = profile.job || '—';
+
+  const trackText = trackLabel(profile.track) + (req.majorReq ? ' · 전공 ' + req.majorReq + '학점' : '');
+  document.getElementById('d-track').textContent = trackText;
+}
+
+/* ============================================================
+   백그라운드 placeholder 렌더 (각 모듈)
+   ============================================================ */
+function bgPlaceholder(titleKey, descKey, sourceKey) {
+  return '<div class="bg-placeholder">' +
+    '<div class="badge">' + t('bgBadge') + '</div>' +
+    '<h4>' + t(titleKey) + '</h4>' +
+    '<p>' + t(descKey) + '</p>' +
+    '<div class="data-source">' + t(sourceKey) + '</div>' +
+  '</div>';
+}
+
+function profileCard() {
+  if (!profile) return '';
+  const req = getGradReq(profile.major, profile.track);
+  const remaining = Math.max(0, req.totalReq - profile.credits);
+  const isDouble = profile.track && profile.track.includes('다전공') && profile.secondaryMajor;
+  const labels = currentLang === 'kor'
+    ? { input: '학생 입력값', major: '학과', track: '경로', credits: '이수/잔여', job: '목표 직무', activities: '비교과·인턴' }
+    : { input: 'Student Input', major: 'Department', track: 'Track', credits: 'Earned/Remaining', job: 'Target Role', activities: 'Activities/Internship' };
+  const labelStyle = 'font-size: 10px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;';
+  return `
+    <div class="card" style="background: var(--sg-red-tint); border-color: var(--sg-red-line);">
+      <div class="card-header" style="background: white;">
+        <div class="card-title"><span class="card-title-icon"></span>${labels.input}</div>
+      </div>
+      <div class="card-body">
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; font-size: 12.5px;">
+          <div><div style="${labelStyle}">${labels.major}</div>
+            <div style="font-size:12px;">
+              <div><span style="font-size:9px;background:var(--sg-red);color:white;padding:1px 5px;margin-right:4px;font-weight:700;">본전공</span>${majorLabel(profile.major)}</div>
+              ${profile.secondaryMajor ? '<div style=\"margin-top:3px;\"><span style=\"font-size:9px;background:var(--ink-3);color:white;padding:1px 5px;margin-right:4px;font-weight:700;\">제 2전공</span>' + majorLabel(profile.secondaryMajor) + '</div>' : ''}
+              ${profile.thirdMajor ? '<div style=\"margin-top:3px;\"><span style=\"font-size:9px;background:var(--muted);color:white;padding:1px 5px;margin-right:4px;font-weight:700;\">제 3전공</span>' + majorLabel(profile.thirdMajor) + '</div>' : ''}
+            </div>
+          </div>
+          <div><div style="${labelStyle}">${labels.track}</div>${trackLabel(profile.track)}</div>
+          <div><div style="${labelStyle}">${labels.credits}</div>${profile.credits} / ${remaining}</div>
+          <div><div style="${labelStyle}">${labels.job}</div><span style="color: var(--sg-red); font-weight: 700;">${profile.job || '—'}</span></div>
+        </div>
+        ${(profile.activities || profile.internships || profile.certs) ? `
+          <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--sg-red-line); font-size: 12px; color: var(--ink-2); line-height: 1.7;">
+            <strong style="color: var(--sg-red);">${labels.activities}:</strong>
+            ${[profile.activities, profile.internships, profile.certs].filter(Boolean).join(' / ')}
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+}
+
+
+/* ============================================================
+   API 인프라
+   ============================================================ */
+const API_BASE = 'http://localhost:8000';
+
+function buildPayload() {
+  if (!profile) return {};
+  return {
+    name:        profile.name        || '',
+    studentId:   profile.studentId   || '',
+    major:       profile.major       || '',
+    deptIri:     '',
+    track:       profile.track       || '',
+    majorIri:    '',
+    currentYS:   profile.currentYS   || '3-1',
+    military:    profile.military    || '해당없음',
+    credits:     profile.credits     || 0,
+    job:         profile.job         || '',
+    secondaryMajor: profile.secondaryMajor || '',
+    thirdMajor:     profile.thirdMajor     || '',
+    completed:   profile.completed   || '',
+    activities:  profile.activities  || '',
+    internships: profile.internships || '',
+    certs:       profile.certs       || '',
+    industries:  profile.industries  || '',
+    region:      profile.region      || '',
+    time:        profile.time        || '',
+  };
+}
+
+async function apiFetch(path, body) {
+  const res = await fetch(API_BASE + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error('API ' + res.status);
+  return res.json();
+}
+
+function loadingHTML() {
+  return '<div class="api-loading"><div class="api-spinner"></div>' +
+    '<div class="api-loading-text">' +
+    (currentLang === 'kor' ? '백그라운드에서 분석 중입니다...' : 'Analyzing in background...') +
+    '</div></div>';
+}
+
+function errorHTML(msg) {
+  return '<div class="api-error">⚠ ' + (currentLang === 'kor'
+    ? '백엔드 연결 오류 — 서버가 실행 중인지 확인하세요. (' + msg + ')'
+    : 'Backend connection error — check server is running. (' + msg + ')') + '</div>';
+}
+
+/* ============================================================
+   MODULE 01: 졸업 역산 플래너
+   ============================================================ */
+function renderPlannerEmpty() {
+  document.getElementById('planner-content').innerHTML = bgPlaceholder('bgPlannerTitle', 'bgPlannerDesc', 'bgPlannerSource');
+}
+async function renderPlanner() {
+  if (!profile) { renderPlannerEmpty(); return; }
+  const el = document.getElementById('planner-content');
+  el.innerHTML = profileCard() + loadingHTML();
+  try {
+    const data = await apiFetch('/api/planner', { profile: buildPayload() });
+    el.innerHTML = profileCard() + buildPlannerHTML(data);
+  } catch(e) {
+    el.innerHTML = profileCard() + errorHTML(e.message) + bgPlaceholder('bgPlannerTitle','bgPlannerDesc','bgPlannerSource');
+  }
+}
+
+function buildPlannerHTML(data) {
+  const s = data.stats || {};
+  const plans = data.plans || [];
+  const lbl = currentLang === 'kor'
+    ? { done:'이수 학점', rem:'잔여 학점', semLeft:'남은 학기', courseLeft:'미이수 과목', recBadge:'추천', fit:'직무 적합도', gpa:'예상 평점', noSem:'학기 데이터 없음' }
+    : { done:'Earned', rem:'Remaining', semLeft:'Sems Left', courseLeft:'Unfinished', recBadge:'REC', fit:'Role Fit', gpa:'Est. GPA', noSem:'No semester data' };
+
+  let html = '<div class="plan-stat-row">' +
+    statCell(lbl.done,       s.credits_done   || 0, '학점') +
+    statCell(lbl.rem,        s.credits_remaining || 0, '학점') +
+    statCell(lbl.semLeft,    s.semesters_left || 0, '학기') +
+    statCell(lbl.courseLeft, s.courses_left   || 0, '개') +
+  '</div>';
+
+  if (!plans.length) {
+    html += '<div class="bg-placeholder"><div class="badge">INFO</div><h4>' +
+      (data.error || (currentLang === 'kor' ? '생성된 경로가 없습니다' : 'No plans generated')) + '</h4></div>';
+    return html;
+  }
+
+  html += '<div class="plan-grid">';
+  plans.forEach(plan => {
+    const rec = plan.recommended;
+    html += '<div class="plan-card' + (rec ? ' is-rec' : '') + '">';
+    html += '<div class="plan-card-top">';
+    if (rec) html += '<span class="plan-card-badge">' + lbl.recBadge + '</span>';
+    html += '<div class="plan-card-label">' + esc(plan.label || plan.id) + '</div>';
+    html += '<div class="plan-card-summary">' + esc(plan.summary || '') + '</div>';
+    html += '</div>';
+
+    // 점수
+    const fitVal  = plan.fit  || 0;
+    const gpaVal  = plan.gpa  || 0;
+    html += '<div class="plan-scores">';
+    html += '<div class="plan-score-item"><div class="score-label">' + lbl.fit + '</div>' +
+      '<div class="score-val">' + fitVal + '<span class="score-unit">pt</span></div></div>';
+    html += '<div class="plan-score-item"><div class="score-label">' + lbl.gpa + '</div>' +
+      '<div class="score-val">' + gpaVal.toFixed(2) + '</div></div>';
+    html += '</div>';
+    html += '<div class="fit-bar-wrap"><div class="fit-bar"><div class="fit-fill" style="width:' + fitVal + '%"></div></div></div>';
+
+    // 학기별 과목
+    html += '<div class="plan-sems">';
+    const sems = plan.semesters || [];
+    if (!sems.length) {
+      html += '<div style="font-size:12px;color:var(--muted);padding:8px 0;">' + lbl.noSem + '</div>';
+    }
+    sems.forEach(sem => {
+      html += '<div class="plan-sem-label">' + esc(sem.label || '') +
+        ' <span style="font-weight:400;color:var(--muted);">(' + (sem.totalCredits || 0) + '학점)</span></div>';
+      (sem.courses || []).forEach(c => {
+        html += '<div class="plan-course-row">' +
+          '<span class="plan-course-code">' + esc(c.code) + '</span>' +
+          '<span class="plan-course-name">' + esc(c.name || '') + '</span>' +
+          '<span class="plan-course-cr">' + (c.credits || 0) + 'cr</span></div>';
+      });
+      html += '<div class="plan-sem-total">' + esc(sem.label || '') + ' 합계: ' + (sem.totalCredits || 0) + '학점</div>';
+    });
+    html += '</div></div>'; // plan-sems, plan-card
+  });
+  html += '</div>'; // plan-grid
+
+  // 산출 근거
+  html += '<div class="basis-card"><div class="basis-card-title">' +
+    (currentLang === 'kor' ? '산출 근거' : 'Generation Basis') + '</div>' +
+    '<div class="basis-grid">' +
+    basisItem(currentLang === 'kor' ? '룰 엔진' : 'Rule Engine',
+      currentLang === 'kor' ? '요람 졸업요건 결정론적 처리' : 'Deterministic curriculum rule engine') +
+    basisItem(currentLang === 'kor' ? '직무 적합도' : 'Role Fit',
+      currentLang === 'kor' ? 'KUZU 그래프 × LLM 의미 매칭' : 'KUZU graph × LLM semantic matching') +
+    basisItem(currentLang === 'kor' ? 'LLM 역할' : 'LLM Role',
+      currentLang === 'kor' ? '3가지 안 자연어 설명 생성' : 'Natural-language plan rationale') +
+    '</div></div>';
+
+  return html;
+}
+
+function statCell(label, val, unit) {
+  return '<div class="plan-stat-cell">' +
+    '<div class="stat-label">' + label + '</div>' +
+    '<div class="stat-val">' + val + '<span class="unit">' + unit + '</span></div></div>';
+}
+function basisItem(label, desc) {
+  return '<div class="basis-item"><strong>' + label + '</strong>' + desc + '</div>';
+}
+
+/* ============================================================
+   MODULE 02: 학기 재설계
+   ============================================================ */
+function renderRebalanceEmpty() {
+  document.getElementById('rebalance-content').innerHTML = '';
+}
+function renderRebalance() {
+  // 폼은 항상 표시, 결과 영역만 초기화
+  document.getElementById('rebalance-content').innerHTML = '';
+}
+
+function _parseGrades(str) {
+  // "CSE3080:A+, MGT3006:B0" → [{code, grade}, ...]
+  if (!str.trim()) return [];
+  return str.split(',').map(s => s.trim()).filter(Boolean).map(item => {
+    const [code, grade] = item.split(':').map(s => s.trim().toUpperCase());
+    return code && grade ? { code, grade } : null;
+  }).filter(Boolean);
+}
+
+async function runRebalance() {
+  if (!profile) {
+    alert(currentLang === 'kor' ? '먼저 프로필을 저장하세요.' : 'Please save your profile first.');
+    return;
+  }
+  const el = document.getElementById('rebalance-content');
+  el.innerHTML = loadingHTML();
+
+  const completedRaw  = (document.getElementById('rb-completed').value || '').split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+  const gradesRaw     = document.getElementById('rb-grades').value || '';
+  const gpaRaw        = parseFloat(document.getElementById('rb-gpa').value) || 0;
+  const leaveRaw      = parseInt(document.getElementById('rb-leave').value) || 0;
+  const majorChg      = (document.getElementById('rb-major-change').value || '').trim();
+  const activitiesRaw = (document.getElementById('rb-activities').value || '').trim();
+
+  const payload = {
+    profile:           buildPayload(),
+    newCompletedCodes: completedRaw,
+    newGrades:         _parseGrades(gradesRaw),
+    currentGpa:        gpaRaw,
+    leaveOfAbsence:    leaveRaw,
+    majorChange:       majorChg,
+    newActivities:     activitiesRaw,
+  };
+
+  try {
+    const data = await apiFetch('/api/rebalance', payload);
+    el.innerHTML = buildRebalanceHTML(data);
+  } catch(e) {
+    el.innerHTML = errorHTML(e.message);
+  }
+}
+
+// 트리거 종류별 색상
+const _TRIGGER_COLORS = {
+  '학점미달': '#c0392b', '전공변경': '#8B1F30', '휴학': '#6c5ce7', '신규활동': '#0984e3',
+};
+function _triggerBadge(txt) {
+  const key = Object.keys(_TRIGGER_COLORS).find(k => txt.includes(k)) || '';
+  const color = _TRIGGER_COLORS[key] || 'var(--ink-3)';
+  return `<span style="display:inline-block;padding:3px 10px;background:${color};color:#fff;font-size:11px;font-weight:700;border-radius:2px;margin:3px 4px 3px 0;">${esc(txt)}</span>`;
+}
+
+function buildRebalanceHTML(data) {
+  if (!data || data.error) {
+    return '<div class="api-error">' + (data && data.error ? esc(data.error) : 'No data') + '</div>';
+  }
+  const delta = data.delta_stats || {};
+  let html = '';
+
+  // ── 트리거 뱃지 ────────────────────────────────────────────────
+  const triggers = delta.triggers || [];
+  const hasRealTrigger = triggers.some(t => t !== '변경사항 없음');
+  if (hasRealTrigger) {
+    html += '<div class="card"><div class="card-header"><div class="card-title"><span class="card-title-icon"></span>감지된 재설계 트리거</div></div>';
+    html += '<div class="card-body">' + triggers.map(_triggerBadge).join('') + '</div></div>';
+  }
+
+  // ── 학점 미달 재수강 과목 ──────────────────────────────────────
+  const retake = delta.retake_priority || [];
+  if (retake.length) {
+    html += '<div class="card" style="border-left:4px solid #c0392b;"><div class="card-header">';
+    html += '<div class="card-title"><span class="card-title-icon" style="background:#c0392b;"></span>재수강 필요 과목</div></div>';
+    html += '<div class="card-body"><div style="display:flex;flex-wrap:wrap;gap:8px;">';
+    retake.forEach(c => {
+      html += `<div style="padding:8px 14px;background:#fdf0f0;border:1px solid #f5c6c6;font-size:12.5px;">`;
+      html += `<strong style="color:#c0392b;">${esc(c.code)}</strong> ${esc(c.name)}</div>`;
+    });
+    html += '</div></div></div>';
+  }
+
+  // ── Delta 요약 통계 ────────────────────────────────────────────
+  const hasStats = delta.credits_remaining !== undefined;
+  if (hasStats) {
+    const semGpa = delta.sem_gpa != null ? delta.sem_gpa : '-';
+    const curGpa = delta.current_gpa ? delta.current_gpa : '-';
+    html += '<div class="card"><div class="card-body"><div class="stat-row" style="display:grid;grid-template-columns:repeat(4,1fr);">';
+    html += `<div class="stat-box"><div class="stat-value">${esc(String(delta.credits_remaining ?? '-'))}</div><div class="stat-label">잔여 졸업 학점</div></div>`;
+    html += `<div class="stat-box"><div class="stat-value">${esc(String(delta.semesters_left ?? '-'))}</div><div class="stat-label">남은 학기</div></div>`;
+    html += `<div class="stat-box"><div class="stat-value">${esc(String(delta.avg_credits_per_sem ?? '-'))}</div><div class="stat-label">학기당 필요 학점</div></div>`;
+    html += `<div class="stat-box"><div class="stat-value">${esc(String(semGpa))}</div><div class="stat-label">이번 학기 GPA / 누적 ${esc(String(curGpa))}</div></div>`;
+    html += '</div></div></div>';
+  }
+
+  // ── 현재 이수 궤적 ─────────────────────────────────────────────
+  const trajectory = data.trajectory || [];
+  if (trajectory.length) {
+    html += '<div class="card"><div class="card-header"><div class="card-title"><span class="card-title-icon"></span>현재 이수 궤적</div></div>';
+    html += '<div class="card-body"><div class="trajectory-wrap">';
+    trajectory.forEach(t => {
+      html += '<div class="trajectory-row">' +
+        '<div class="trajectory-dot"></div>' +
+        '<div class="trajectory-period">' + esc(t.period || '') + '</div>' +
+        '<div class="trajectory-detail"><strong>' + esc(t.title || '') + '</strong> — ' + esc(t.detail || '') + '</div></div>';
+    });
+    html += '</div></div></div>';
+  }
+
+  // ── What-If 재설계 시나리오 ────────────────────────────────────
+  const scenarios = data.scenarios || [];
+  if (scenarios.length) {
+    html += '<div class="card"><div class="card-header"><div class="card-title"><span class="card-title-icon"></span>What-If 재설계 시나리오</div></div><div class="card-body">';
+    scenarios.forEach((sc, i) => {
+      const triggerColor = _TRIGGER_COLORS[sc.trigger] || 'var(--sg-red)';
+      html += '<div style="margin-bottom:24px;">';
+      html += `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">`;
+      html += `<div style="font-size:13px;font-weight:700;color:${triggerColor};">${esc(sc.title || ('시나리오 ' + (i+1)))}</div>`;
+      if (sc.trigger) html += `<span style="padding:2px 8px;background:${triggerColor};color:#fff;font-size:10px;font-weight:700;">${esc(sc.trigger)}</span>`;
+      html += '</div>';
+      html += '<div class="diff-grid">';
+      html += '<div class="diff-col before"><div class="diff-col-label">' + esc(sc.before_label || 'Before') + '</div>';
+      (sc.before_courses || []).forEach(c => { html += '<div class="diff-item">' + esc(c) + '</div>'; });
+      html += '</div>';
+      html += '<div class="diff-col after"><div class="diff-col-label">' + esc(sc.after_label || 'After') + '</div>';
+      (sc.after_courses || []).forEach(c => { html += '<div class="diff-item">' + esc(c) + '</div>'; });
+      html += '</div></div>';
+      if (sc.reason) html += '<div class="diff-reason">💡 ' + esc(sc.reason) + '</div>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+  }
+
+  // ── 트리거 종합 설명 (LLM 서술) ───────────────────────────────
+  if (data.triggers) {
+    html += '<div class="trigger-note">🔄 ' + esc(data.triggers) + '</div>';
+  }
+
+  return html || '<div style="color:var(--muted);padding:32px;text-align:center;">재설계 결과가 없습니다.</div>';
+}
+
+/* ============================================================
+   MODULE 03: 강의 추천
+   ============================================================ */
+let _recSort = 'fit';
+let _recType = 'all';
+
+function renderRecommenderEmpty() {
+  document.getElementById('recommender-content').innerHTML = bgPlaceholder('bgRecommenderTitle', 'bgRecommenderDesc', 'bgRecommenderSource');
+}
+async function renderRecommender() {
+  if (!profile) { renderRecommenderEmpty(); return; }
+  const el = document.getElementById('recommender-content');
+  el.innerHTML = profileCard() + loadingHTML();
+  try {
+    const data = await apiFetch('/api/recommender', { profile: buildPayload(), sortBy: _recSort, filterType: _recType });
+    el.innerHTML = profileCard() + buildRecommenderHTML(data);
+  } catch(e) {
+    el.innerHTML = profileCard() + errorHTML(e.message) + bgPlaceholder('bgRecommenderTitle','bgRecommenderDesc','bgRecommenderSource');
+  }
+}
+
+function buildRecommenderHTML(data) {
+  const courses = data.courses || [];
+  const l = currentLang === 'kor';
+
+  let html = '<div class="recommender-controls">' +
+    '<span class="ctrl-label">' + (l ? '정렬' : 'Sort') + '</span>' +
+    '<select onchange="changeRecSort(this.value)">' +
+    '<option value="fit"'  + (_recSort==='fit'  ?' selected':'') + '>' + (l ? '직무 적합도순' : 'By Role Fit')   + '</option>' +
+    '<option value="gpa"'  + (_recSort==='gpa'  ?' selected':'') + '>' + (l ? '예상 평점순'   : 'By Est. GPA')   + '</option>' +
+    '<option value="code"' + (_recSort==='code' ?' selected':'') + '>' + (l ? '강의코드순'    : 'By Code')       + '</option>' +
+    '</select>' +
+    '<span class="ctrl-label">' + (l ? '유형' : 'Type') + '</span>' +
+    '<select onchange="changeRecType(this.value)">' +
+    '<option value="all"'            + (_recType==='all'            ?' selected':'') + '>' + (l ? '전체' : 'All')      + '</option>' +
+    '<option value="RequiredCourse"' + (_recType==='RequiredCourse' ?' selected':'') + '>' + (l ? '전공필수' : 'Required') + '</option>' +
+    '<option value="ElectiveCourse"' + (_recType==='ElectiveCourse' ?' selected':'') + '>' + (l ? '전공선택' : 'Elective') + '</option>' +
+    '</select>' +
+    '<span style="margin-left:auto;font-size:12px;color:var(--muted);">' + (data.total || 0) + (l ? '개 과목' : ' courses') + '</span>' +
+  '</div>';
+
+  if (!courses.length) {
+    html += '<div class="bg-placeholder"><div class="badge">INFO</div><h4>' + (l ? '추천 강의가 없습니다' : 'No courses found') + '</h4></div>';
+    return html;
+  }
+
+  html += '<div class="card"><div class="card-body" style="padding:0;overflow-x:auto;"><table class="course-table">';
+  html += '<tr><th>' + (l?'강의코드':'Code') + '</th><th>' + (l?'강의명':'Name') + '</th><th>' + (l?'유형':'Type') + '</th>';
+  html += '<th>' + (l?'학년':'Year') + '</th><th>' + (l?'학점':'Cr') + '</th><th>' + (l?'예상GPA':'GPA') + '</th>';
+  html += '<th>' + (l?'직무 적합도':'Fit') + '</th></tr>';
+
+  courses.forEach(c => {
+    const fit = c.fit || 0;
+    const pillClass = fit >= 80 ? 'high' : fit >= 50 ? 'mid' : 'low';
+    const typeLabel = c.typeLabel || c.type || '';
+    html += '<tr>' +
+      '<td><span style="font-weight:700;color:var(--sg-red);font-variant-numeric:tabular-nums;">' + esc(c.code) + '</span></td>' +
+      '<td style="max-width:200px;">' + esc(c.name || '') + '</td>' +
+      '<td><span style="font-size:11px;background:var(--bg-3);padding:2px 7px;">' + esc(typeLabel) + '</span></td>' +
+      '<td style="text-align:center;">' + (c.yearMin || '—') + '</td>' +
+      '<td style="text-align:center;">' + (c.credits || '—') + '</td>' +
+      '<td style="text-align:center;font-variant-numeric:tabular-nums;">' + (c.gpa || '—') + '</td>' +
+      '<td><span class="fit-pill ' + pillClass + '">' + fit + 'pt</span></td></tr>';
+  });
+  html += '</table></div></div>';
+
+  if (data.top3_rationale) {
+    html += '<div class="top3-rationale"><div class="top3-title">' +
+      (l ? 'TOP 3 추천 이유 (AI 해설)' : 'TOP 3 Rationale (AI Analysis)') + '</div>' +
+      '<div class="top3-text">' + esc(data.top3_rationale) + '</div></div>';
+  }
+  return html;
+}
+
+async function changeRecSort(val) { _recSort = val; await renderRecommender(); }
+async function changeRecType(val) { _recType = val; await renderRecommender(); }
+
+/* ============================================================
+   MODULE 04: 진로 기회 큐레이션
+   ============================================================ */
+function renderOpportunitiesEmpty() {
+  document.getElementById('opportunities-content').innerHTML = bgPlaceholder('bgOpportunitiesTitle', 'bgOpportunitiesDesc', 'bgOpportunitiesSource');
+}
+async function renderOpportunities() {
+  if (!profile) { renderOpportunitiesEmpty(); return; }
+  const el = document.getElementById('opportunities-content');
+  el.innerHTML = profileCard() + loadingHTML();
+  try {
+    const data = await apiFetch('/api/opportunities', { profile: buildPayload() });
+    el.innerHTML = profileCard() + buildOpportunitiesHTML(data);
+  } catch(e) {
+    el.innerHTML = profileCard() + errorHTML(e.message) + bgPlaceholder('bgOpportunitiesTitle','bgOpportunitiesDesc','bgOpportunitiesSource');
+  }
+}
+
+function buildOpportunitiesHTML(data) {
+  const opps = data.opportunities || [];
+  const l = currentLang === 'kor';
+
+  const tagMap = { '인턴':'intern', '공모전':'contest', '대외활동':'activity', '교내':'campus', '어학·자격증':'cert', '연수':'study' };
+  const tagMapEng = { 'Intern':'intern', 'Competition':'contest', 'Activity':'activity', 'Campus':'campus', 'Cert':'cert', 'Study':'study' };
+
+  let html = '<div class="opp-overview">' +
+    '<div class="opp-ov-cell"><div class="ov-label">' + (l?'매칭 공고':'Matched') + '</div>' +
+    '<div class="ov-val">' + (data.total||0) + '</div><div class="ov-sub">' + (data.job||'') + '</div></div>' +
+    '<div class="opp-ov-cell"><div class="ov-label">' + (l?'고적합 (80점+)':'High-Fit (80+)') + '</div>' +
+    '<div class="ov-val">' + (data.high_match_count||0) + '</div><div class="ov-sub">' + (l?'직무 핵심 연관':'Core role match') + '</div></div>' +
+    '<div class="opp-ov-cell"><div class="ov-label">' + (l?'관심 지역':'Region') + '</div>' +
+    '<div class="ov-val" style="font-size:16px;">' + esc(data.region||'—') + '</div><div class="ov-sub">' + esc(data.industries||'—') + '</div></div>' +
+  '</div>';
+
+  if (!opps.length) {
+    html += '<div class="bg-placeholder"><div class="badge">INFO</div><h4>' + (l?'매칭 공고가 없습니다':'No matches found') + '</h4></div>';
+    return html;
+  }
+
+  html += '<div class="opp-grid">';
+  opps.forEach(o => {
+    const tagCls = tagMap[o.tag] || tagMapEng[o.tag] || '';
+    const match = o.match || 0;
+    const cardUrl    = o.url || '';
+    const urlType    = o.url_type || (cardUrl ? 'direct' : '');
+    const isDirect   = urlType === 'direct';
+    const isSearch   = urlType === 'search';
+    // 직접 링크: ↗ (빨강)  /  검색 링크: 🔍 (회색)  /  없음: 아이콘 없음
+    const urlIcon    = isDirect ? '↗' : (isSearch ? '🔍' : '');
+    const urlTitle   = isDirect ? '공고 페이지로 이동'
+                     : isSearch ? '검색 결과로 이동 (직접 링크 미확인)'
+                     : '';
+    const urlColor   = isDirect ? 'var(--sg-red)' : '#888';
+    const cardTag    = cardUrl
+      ? '<a href="' + cardUrl + '" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;display:block;">'
+      : '';
+    const cardTagClose = cardUrl ? '</a>' : '';
+
+    html += '<div class="opp-card" style="' + (cardUrl ? 'cursor:pointer;' : '') + '">' +
+      cardTag +
+      '<div class="opp-card-top">' +
+        '<span class="opp-tag ' + tagCls + '">' + esc(o.tag||'') + '</span>' +
+        '<span style="display:flex;align-items:center;gap:6px;">' +
+          '<span class="match-badge">' + match + '<span style="font-size:11px;font-weight:400;color:var(--muted);">pt</span></span>' +
+          (urlIcon ? '<span title="' + urlTitle + '" style="font-size:14px;color:' + urlColor + ';">' + urlIcon + '</span>' : '') +
+        '</span>' +
+      '</div>' +
+      '<div class="opp-org">' + esc(o.org||'') + '</div>' +
+      '<div class="opp-title">' + esc(o.title||'') + '</div>';
+    if (o.matchReason || o.reason) html += '<div class="opp-reason">' + esc(o.matchReason||o.reason||'') + '</div>';
+    html += '<div class="opp-meta">' +
+      (o.deadline ? '<span>📅 ' + esc(o.deadline) + '</span>' : '') +
+      (o.hours    ? '<span>⏱ ' + esc(o.hours)    + '</span>' : '') +
+      (o.region   ? '<span>📍 ' + esc(o.region)   + '</span>' : '') +
+      (isSearch   ? '<span style="color:#888;font-size:11px;">🔍 검색 링크</span>' : '') +
+    '</div>' + cardTagClose + '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+/* ============================================================
+   MODULE 05: 동문 경로 패턴
+   ============================================================ */
+function renderAlumniEmpty() {
+  document.getElementById('alumni-content').innerHTML = bgPlaceholder('bgAlumniTitle', 'bgAlumniDesc', 'bgAlumniSource');
+}
+async function renderAlumni() {
+  if (!profile) { renderAlumniEmpty(); return; }
+  const el = document.getElementById('alumni-content');
+  el.innerHTML = profileCard() + loadingHTML();
+  try {
+    const data = await apiFetch('/api/alumni', { profile: buildPayload() });
+    el.innerHTML = profileCard() + buildAlumniHTML(data);
+  } catch(e) {
+    el.innerHTML = profileCard() + errorHTML(e.message) + bgPlaceholder('bgAlumniTitle','bgAlumniDesc','bgAlumniSource');
+  }
+}
+
+function buildAlumniHTML(data) {
+  if (!data || data.error) {
+    return bgPlaceholder('bgAlumniTitle','bgAlumniDesc','bgAlumniSource');
+  }
+  const l = currentLang === 'kor';
+  let html = '';
+
+  // 개요 배너
+  html += '<div class="alumni-overview">' +
+    '<div class="alumni-ov-headline">' + esc(data.headline || (l?'동문 진로 패턴':'Alumni Path Pattern')) + '</div>' +
+    '<div class="alumni-ov-meta">' +
+    (data.total_alumni ? '<span>' + data.total_alumni + (l?'명 분석':'alumni analyzed') + '</span>' : '') +
+    (data.avg_internship ? '<span>인턴 평균 ' + esc(data.avg_internship) + '</span>' : '') +
+  '</div></div>';
+
+  // 주요 기업
+  const cos = data.top_companies || [];
+  if (cos.length) {
+    html += '<div class="alumni-companies">' +
+      '<div class="alumni-companies-label">' + (l?'주요 취업 기업':'Top Companies') + '</div>' +
+      '<div class="alumni-company-list">' +
+      cos.map(c => '<span class="alumni-company-chip">' + esc(c) + '</span>').join('') +
+      '</div></div>';
+  }
+
+  // 공통 이수 과목 패턴
+  const patterns = data.patterns || [];
+  if (patterns.length) {
+    html += '<div class="pattern-section">' +
+      '<div class="pattern-section-title">' + (l?'공통 이수 과목 패턴':'Common Course Patterns') + '</div>';
+    patterns.forEach(p => {
+      const w = Math.min(p.pct || p.bar_width || 0, 100);
+      html += '<div class="pattern-row">' +
+        '<div style="min-width:70px;font-size:12px;font-weight:700;color:var(--sg-red);">' + esc(p.code||'') + '</div>' +
+        '<div style="font-size:12.5px;color:var(--ink-2);flex:1;padding:0 8px;">' + esc(p.name||'') + '</div>' +
+        '<div class="pattern-bar-wrap" style="width:120px;">' +
+          '<div class="pattern-bar"><div class="pattern-bar-fill" style="width:' + w + '%"></div></div>' +
+        '</div>' +
+        '<div class="pattern-pct">' + (p.pct||0) + '%</div>' +
+      '</div>';
+    });
+    html += '</div>';
+  }
+
+  // 자격증 패턴
+  const certs = data.cert_patterns || [];
+  if (certs.length) {
+    html += '<div class="pattern-section">' +
+      '<div class="pattern-section-title">' + (l?'공통 자격증·어학 패턴':'Common Certs & Language') + '</div>';
+    certs.forEach(c => {
+      html += '<div style="padding:7px 0;border-bottom:1px solid var(--line-3);font-size:13px;">✓ ' + esc(c) + '</div>';
+    });
+    html += '</div>';
+  }
+
+  // 인사이트
+  if (data.insight) {
+    html += '<div class="alumni-insight">' +
+      '<div class="alumni-insight-label">' + (l?'AI 분석 인사이트':'AI Analysis Insight') + '</div>' +
+      '<div class="alumni-insight-text">' + esc(data.insight) + '</div></div>';
+  }
+
+  return html;
+}
+
+/* ============================================================
+   공통 유틸
+   ============================================================ */
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+
+/* ============================================================
+   인사말 (한/영 어순 차이 처리)
+   ============================================================ */
+function refreshGreeting() {
+  const name = (profile && profile.name) ? profile.name : t('visitor');
+  const text = (currentLang === 'kor')
+    ? '<strong id="header-name">' + name + '</strong>님 환영합니다'
+    : 'Welcome, <strong id="header-name">' + name + '</strong>';
+  const el = document.getElementById('greeting-text');
+  if (el) el.innerHTML = text;
+}
+
+/* ============================================================
+   날짜 표시 (한/영)
+   ============================================================ */
+function refreshDate() {
+  const d = new Date();
+  let txt;
+  if (currentLang === 'kor') {
+    const day = ['일','월','화','수','목','금','토'][d.getDay()];
+    txt = d.getFullYear() + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + String(d.getDate()).padStart(2,'0') + '(' + day + ')';
+  } else {
+    const day = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+    const month = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+    txt = month + ' ' + d.getDate() + ', ' + d.getFullYear() + ' (' + day + ')';
+  }
+  document.getElementById('header-date').textContent = txt;
+}
+
+/* ============================================================
+   모달 백드롭 클릭으로 닫기
+   ============================================================ */
+document.getElementById('onboarding').addEventListener('click', e => {
+  if (e.target.id === 'onboarding') closeOnboarding();
+});
+
+/* ============================================================
+   파일 업로드 (백그라운드 분석 시뮬레이션)
+   ============================================================ */
+let extractedCourses = [];
+const uploadZone = document.getElementById('upload-zone');
+const fileInput = document.getElementById('f-transcript-file');
+const uploadBtnTrigger = document.getElementById('upload-btn-trigger');
+
+uploadBtnTrigger.addEventListener('click', () => fileInput.click());
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  if (e.dataTransfer.files.length > 0) handleTranscriptFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => {
+  if (e.target.files.length > 0) handleTranscriptFile(e.target.files[0]);
+});
+
+function handleTranscriptFile(file) {
+  if (file.size > 10 * 1024 * 1024) {
+    alert(currentLang === 'kor' ? '파일 크기는 10MB 이하여야 합니다.' : 'File size must be 10MB or less.');
+    return;
+  }
+  document.getElementById('upload-empty').style.display = 'none';
+  document.getElementById('upload-done').style.display = 'none';
+  document.getElementById('upload-loading').style.display = 'block';
+  uploadZone.classList.add('has-file');
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  fetch(API_BASE + '/api/transcript', { method: 'POST', body: formData })
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById('upload-loading').style.display = 'none';
+      document.getElementById('upload-done').style.display = 'block';
+      document.getElementById('upload-filename').textContent = file.name + ' · ' + (file.size/1024).toFixed(1) + ' KB';
+      extractedCourses = (data.courses || []).map(c => ({ code: c.code, name: c.name || '', sem: c.sem || '' }));
+      renderExtractedCourses();
+      const codes = extractedCourses.map(c => c.code).join(', ');
+      document.getElementById('f-completed').value = codes;
+      const cntLabel = currentLang === 'kor'
+        ? (data.count || 0) + '개 과목 추출 · ' + (data.totalCredits || 0) + '학점'
+        : (data.count || 0) + ' courses extracted · ' + (data.totalCredits || 0) + ' credits';
+      document.getElementById('upload-meta').textContent = cntLabel;
+    })
+    .catch(() => {
+      // API 없으면 시뮬레이션 fallback
+      setTimeout(() => {
+        document.getElementById('upload-filename').textContent = file.name + ' · ' + (file.size/1024).toFixed(1) + ' KB';
+        const meta = currentLang === 'kor'
+          ? '백그라운드 시스템 연동 시 자동 추출됩니다.'
+          : 'Will be auto-extracted upon backend integration.';
+        document.getElementById('upload-meta').textContent = meta;
+        extractedCourses = [];
+        renderExtractedCourses();
+        document.getElementById('f-completed').value = '';
+        document.getElementById('upload-loading').style.display = 'none';
+        document.getElementById('upload-done').style.display = 'block';
+      }, 1400);
+    });
+}
+
+function renderExtractedCourses() {
+  const container = document.getElementById('extracted-courses');
+  if (!container) return;
+  if (extractedCourses.length === 0) {
+    container.innerHTML = '<div style="font-size: 11.5px; color: var(--muted); padding: 8px 0; font-style: italic;">' +
+      (currentLang === 'kor'
+        ? '추출된 강의 목록이 여기 표시됩니다 (백그라운드 연동 필요)'
+        : 'Extracted courses will appear here (backend integration required)') +
+      '</div>';
+    return;
+  }
+  container.innerHTML = extractedCourses.map((c, i) =>
+    '<span class="course-pill">' +
+      '<span class="pill-code">' + c.code + '</span>' +
+      '<span>' + (c.name || '') + '</span>' +
+      '<span style="color: var(--faint);">' + (c.sem || '') + '</span>' +
+      '<span class="pill-x" onclick="removeExtractedCourse(' + i + ')" title="remove">×</span>' +
+    '</span>'
+  ).join('');
+}
+function removeExtractedCourse(i) {
+  extractedCourses.splice(i, 1);
+  renderExtractedCourses();
+  document.getElementById('f-completed').value = extractedCourses.map(c => c.code).join(', ');
+}
+function resetTranscript() {
+  extractedCourses = [];
+  fileInput.value = '';
+  document.getElementById('f-completed').value = '';
+  document.getElementById('upload-empty').style.display = 'block';
+  document.getElementById('upload-done').style.display = 'none';
+  uploadZone.classList.remove('has-file');
+}
+function toggleManualEntry() {
+  const ta = document.getElementById('f-completed');
+  const btn = document.getElementById('manual-toggle');
+  if (ta.style.display === 'none' || ta.style.display === '') {
+    ta.style.display = 'block';
+    btn.textContent = t('manualToggleClose');
+  } else {
+    ta.style.display = 'none';
+    btn.textContent = t('manualToggle');
+  }
+}
+
+/* ============================================================
+   초기화
+   ============================================================ */
+applyTranslations();
+refreshGreeting();
+refreshDate();
+renderPlannerEmpty();
+renderRebalanceEmpty();
+renderRecommenderEmpty();
+renderOpportunitiesEmpty();
+renderAlumniEmpty();
+renderExtractedCourses();
+</script>
+
+</body>
+</html>
