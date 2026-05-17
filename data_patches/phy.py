@@ -1,116 +1,4 @@
-#!/usr/bin/env python3
-"""apply_patches5.py — Apply PHY (물리학과) patch."""
-
-# ── helpers ──────────────────────────────────────────────────────────
-def py_repr(obj):
-    if obj is None: return 'None'
-    if obj is True: return 'True'
-    if obj is False: return 'False'
-    if isinstance(obj, str):
-        s = obj.replace('\\', '\\\\').replace("'", "\\'")
-        return f"'{s}'"
-    if isinstance(obj, (int, float)): return repr(obj)
-    if isinstance(obj, list):
-        return '[' + ', '.join(py_repr(v) for v in obj) + ']'
-    if isinstance(obj, dict):
-        items = ', '.join(f"{py_repr(k)}: {py_repr(v)}" for k, v in obj.items())
-        return '{' + items + '}'
-    return repr(obj)
-
-
-def replace_credits(content, iri, new_credits_dict):
-    lines = content.split('\n')
-    for i, line in enumerate(lines):
-        if f"'iri': '{iri}'" not in line:
-            continue
-        start = line.find("'credits': {")
-        if start == -1:
-            print(f"  WARNING: no 'credits' for {iri}")
-            continue
-        credits_start = start + len("'credits': ")
-        depth, j = 0, credits_start
-        while j < len(line):
-            if line[j] == '{': depth += 1
-            elif line[j] == '}':
-                depth -= 1
-                if depth == 0:
-                    credits_end = j + 1; break
-            j += 1
-        lines[i] = line[:credits_start] + py_repr(new_credits_dict) + line[credits_end:]
-        print(f"  [OK] Replaced credits for {iri}")
-        break
-    return '\n'.join(lines)
-
-
-def fix_str_field_by_code(content, code, field, old_val, new_val):
-    old_str = f"'{field}': '{old_val}'"
-    new_str = f"'{field}': '{new_val}'"
-    lines = content.split('\n')
-    for i, line in enumerate(lines):
-        if f"'courseCode': '{code}'" in line:
-            if old_str in line:
-                lines[i] = line.replace(old_str, new_str, 1)
-                return '\n'.join(lines), True
-            else:
-                print(f"  WARNING: {code} – '{old_str}' not found in line")
-                return '\n'.join(lines), False
-    print(f"  WARNING: courseCode '{code}' not found")
-    return content, False
-
-
-def fix_int_field_by_code(content, code, field, old_val, new_val):
-    old_str = f"'{field}': {old_val}"
-    new_str = f"'{field}': {new_val}"
-    lines = content.split('\n')
-    for i, line in enumerate(lines):
-        if f"'courseCode': '{code}'" in line:
-            if old_str in line:
-                lines[i] = line.replace(old_str, new_str, 1)
-                return '\n'.join(lines), True
-            else:
-                print(f"  WARNING: {code} – '{old_str}' not found in line")
-                return '\n'.join(lines), False
-    print(f"  WARNING: courseCode '{code}' not found")
-    return content, False
-
-
-def fix_bool_field_by_code(content, code, field, old_val, new_val):
-    old_str = f"'{field}': {old_val}"
-    new_str = f"'{field}': {new_val}"
-    lines = content.split('\n')
-    for i, line in enumerate(lines):
-        if f"'courseCode': '{code}'" in line:
-            if old_str in line:
-                lines[i] = line.replace(old_str, new_str, 1)
-                return '\n'.join(lines), True
-            else:
-                print(f"  WARNING: {code} – '{old_str}' not found in line")
-                return '\n'.join(lines), False
-    print(f"  WARNING: courseCode '{code}' not found")
-    return content, False
-
-
-def add_job_fits(content, fits, label):
-    lines = content.split('\n')
-    in_list = False
-    for i, line in enumerate(lines):
-        if 'COURSE_JOB_FITS' in line and '= [' in line:
-            in_list = True
-        if in_list and line.strip() == ']':
-            inserts = []
-            for fit in fits:
-                cc = fit['courseCode']
-                ji = fit['jobIri']
-                wt = fit['weight']
-                inserts.append(f"    {{'courseCode': '{cc}', 'jobIri': '{ji}', 'weight': {wt}}},")
-            lines[i:i] = inserts
-            print(f"  [OK] Added {len(fits)} {label} job fits")
-            return '\n'.join(lines)
-    print("  WARNING: COURSE_JOB_FITS closing ']' not found")
-    return content
-
-
-# ── PHY patch data ───────────────────────────────────────────────────
+"""PHY (물리학과) patch data."""
 
 DEPT_PHY_CREDITS_FULL = {
     # ── 전인교육 (공통) ──
@@ -287,24 +175,19 @@ DEPT_PHY_CREDITS_FULL = {
     },
 }
 
-
-# ── graduationCategory 수정: 전공선택 → 전공필수 ──────────────────────
+# PHY3003/3004/3101/3102: 전공선택 → 전공필수
 CAT_TO_REQUIRED = ['PHY3003', 'PHY3004', 'PHY3101', 'PHY3102']
 
-# ── countsTowardMajorCredits True → False ────────────────────────────
-# 전공입문: PHY1001/1002/1101/1102
-# 기타이수요건 제외: PHY4201/4203/4204
+# 전공입문(PHY1001/1002/1101/1102) + 기타이수 제외(PHY4201/4203/4204): 전공학점 미포함
 COUNTS_FALSE = ['PHY1001', 'PHY1002', 'PHY1101', 'PHY1102',
                 'PHY4201', 'PHY4203', 'PHY4204']
 
-# ── PHY4201/4204 데이터 손상 수정 ───────────────────────────────────
 # PHY4201: courseName '(특수연구)' → '특수연구', credits 25 → 3
-# PHY4204: courseName 오염 → '졸업프로젝트', credits 25 → 3
+# PHY4204: courseName + description 오염 수정, credits 25 → 3
 PHY4201_NAME_FIX = ('(특수연구)', '특수연구')
 PHY4204_NAME_FIX = ('(졸업프로젝트)를 제외한 전공과목 중에서 25학점 이수', '졸업프로젝트')
 PHY4204_DESC_FIX = ('(졸업프로젝트)를 제외한 전공과목 중에서 25학점 이수', '졸업프로젝트 (강의 3시간)')
 
-# ── COURSE_JOB_FITS ──────────────────────────────────────────────────
 PHY_COURSE_JOB_FITS = [
     # 전공필수 — 기초 물리
     {"courseCode": "PHY2001", "jobIri": "Job_반도체",    "weight": 0.70},
@@ -321,7 +204,6 @@ PHY_COURSE_JOB_FITS = [
     {"courseCode": "PHY2101", "jobIri": "Job_PM",        "weight": 0.55},
     {"courseCode": "PHY2102", "jobIri": "Job_반도체",    "weight": 0.70},
     {"courseCode": "PHY2102", "jobIri": "Job_PM",        "weight": 0.55},
-
     # 전공필수 — 양자·열·통계
     {"courseCode": "PHY3001", "jobIri": "Job_반도체",    "weight": 0.85},
     {"courseCode": "PHY3001", "jobIri": "Job_AI엔지니어", "weight": 0.65},
@@ -336,39 +218,32 @@ PHY_COURSE_JOB_FITS = [
     {"courseCode": "PHY3101", "jobIri": "Job_PM",        "weight": 0.60},
     {"courseCode": "PHY3102", "jobIri": "Job_반도체",    "weight": 0.70},
     {"courseCode": "PHY3102", "jobIri": "Job_PM",        "weight": 0.60},
-
     # 전공선택 — 역학·수리물리
     {"courseCode": "PHY2002", "jobIri": "Job_반도체",    "weight": 0.65},
     {"courseCode": "PHY2006", "jobIri": "Job_데이터분석", "weight": 0.65},
     {"courseCode": "PHY2006", "jobIri": "Job_AI엔지니어", "weight": 0.60},
-
     # 전자물리학 — 반도체 직결
     {"courseCode": "PHY2007", "jobIri": "Job_반도체",    "weight": 0.90},
     {"courseCode": "PHY2007", "jobIri": "Job_소프트웨어", "weight": 0.60},
     {"courseCode": "PHY2008", "jobIri": "Job_반도체",    "weight": 0.90},
     {"courseCode": "PHY2008", "jobIri": "Job_소프트웨어", "weight": 0.60},
-
     # 고체물리학 — 반도체 핵심
     {"courseCode": "PHY4001", "jobIri": "Job_반도체",    "weight": 0.95},
     {"courseCode": "PHY4001", "jobIri": "Job_PM",        "weight": 0.60},
     {"courseCode": "PHY4002", "jobIri": "Job_반도체",    "weight": 0.95},
     {"courseCode": "PHY4002", "jobIri": "Job_PM",        "weight": 0.60},
-
     # 반도체물리학
     {"courseCode": "PHY4009", "jobIri": "Job_반도체",    "weight": 1.00},
     {"courseCode": "PHY4009", "jobIri": "Job_PM",        "weight": 0.65},
-
     # 광학
     {"courseCode": "PHY4003", "jobIri": "Job_반도체",    "weight": 0.80},
     {"courseCode": "PHY4003", "jobIri": "Job_데이터분석", "weight": 0.60},
     {"courseCode": "PHY4004", "jobIri": "Job_반도체",    "weight": 0.80},
-
     # 입자이론
     {"courseCode": "PHY4005", "jobIri": "Job_데이터분석", "weight": 0.60},
     {"courseCode": "PHY4005", "jobIri": "Job_AI엔지니어", "weight": 0.65},
     {"courseCode": "PHY4006", "jobIri": "Job_데이터분석", "weight": 0.60},
     {"courseCode": "PHY4006", "jobIri": "Job_AI엔지니어", "weight": 0.65},
-
     # 전산물리학 — 데이터·AI 핵심
     {"courseCode": "PHY4007", "jobIri": "Job_데이터분석", "weight": 0.85},
     {"courseCode": "PHY4007", "jobIri": "Job_AI엔지니어", "weight": 0.80},
@@ -376,7 +251,6 @@ PHY_COURSE_JOB_FITS = [
     {"courseCode": "PHY4008", "jobIri": "Job_데이터분석", "weight": 0.85},
     {"courseCode": "PHY4008", "jobIri": "Job_AI엔지니어", "weight": 0.80},
     {"courseCode": "PHY4008", "jobIri": "Job_소프트웨어", "weight": 0.75},
-
     # 응용물리 계열
     {"courseCode": "PHY4010", "jobIri": "Job_데이터분석", "weight": 0.55},
     {"courseCode": "PHY4011", "jobIri": "Job_데이터분석", "weight": 0.60},
@@ -393,13 +267,11 @@ PHY_COURSE_JOB_FITS = [
     {"courseCode": "PHY4019", "jobIri": "Job_데이터분석", "weight": 0.65},
     {"courseCode": "PHY4101", "jobIri": "Job_반도체",    "weight": 0.75},
     {"courseCode": "PHY4101", "jobIri": "Job_PM",        "weight": 0.65},
-
     # 물리학 특강 / 특허
     {"courseCode": "PHY4202", "jobIri": "Job_교육",      "weight": 0.70},
     {"courseCode": "PHY4202", "jobIri": "Job_반도체",    "weight": 0.65},
     {"courseCode": "PHY4203", "jobIri": "Job_컨설팅",    "weight": 0.70},
     {"courseCode": "PHY4203", "jobIri": "Job_기획",      "weight": 0.65},
-
     # 대학원연계 — 고전물리·통계역학·양자장이론
     {"courseCode": "PHYG001", "jobIri": "Job_반도체",    "weight": 0.75},
     {"courseCode": "PHYG001", "jobIri": "Job_데이터분석", "weight": 0.60},
@@ -408,7 +280,6 @@ PHY_COURSE_JOB_FITS = [
     {"courseCode": "PHYG003", "jobIri": "Job_AI엔지니어", "weight": 0.65},
     {"courseCode": "PHYG006", "jobIri": "Job_데이터분석", "weight": 0.65},
     {"courseCode": "PHYG006", "jobIri": "Job_AI엔지니어", "weight": 0.70},
-
     # AI·기계학습 — AI/데이터 핵심
     {"courseCode": "PHYG004", "jobIri": "Job_AI엔지니어", "weight": 0.95},
     {"courseCode": "PHYG004", "jobIri": "Job_데이터분석", "weight": 0.90},
@@ -416,7 +287,6 @@ PHY_COURSE_JOB_FITS = [
     {"courseCode": "PHYG005", "jobIri": "Job_AI엔지니어", "weight": 0.95},
     {"courseCode": "PHYG005", "jobIri": "Job_데이터분석", "weight": 0.85},
     {"courseCode": "PHYG005", "jobIri": "Job_반도체",    "weight": 0.70},
-
     # 캡스톤 / 연구 / 현장실습
     {"courseCode": "PHY3501", "jobIri": "Job_PM",        "weight": 0.85},
     {"courseCode": "PHY3501", "jobIri": "Job_반도체",    "weight": 0.70},
@@ -431,66 +301,3 @@ PHY_COURSE_JOB_FITS = [
     {"courseCode": "PHY3515", "jobIri": "Job_기획",      "weight": 0.65},
     {"courseCode": "PHY3515", "jobIri": "Job_교육",      "weight": 0.60},
 ]
-
-
-# ── MAIN ─────────────────────────────────────────────────────────────
-BASE = '/home/user/Sogangproject'
-
-# STEP 1: data_round1.py — expand Dept_PHY credits
-print("=== STEP 1: data_round1.py ===")
-with open(f'{BASE}/data_round1.py', encoding='utf-8') as f:
-    r1 = f.read()
-r1 = replace_credits(r1, 'Dept_PHY', DEPT_PHY_CREDITS_FULL)
-with open(f'{BASE}/data_round1.py', 'w', encoding='utf-8') as f:
-    f.write(r1)
-print("data_round1.py written.\n")
-
-# STEP 2: data_round2.py — fix course classifications + data damage
-print("=== STEP 2: data_round2.py ===")
-with open(f'{BASE}/data_round2.py', encoding='utf-8') as f:
-    r2 = f.read()
-
-# 2a. graduationCategory: 전공선택 → 전공필수
-print("  Fixing graduationCategory: 전공선택 → 전공필수 (4 courses)...")
-for code in CAT_TO_REQUIRED:
-    r2, ok = fix_str_field_by_code(r2, code, 'graduationCategory', '전공선택', '전공필수')
-    if ok:
-        print(f"    {code}: 전공선택 → 전공필수")
-
-# 2b. PHY4201 데이터 손상 수정: courseName + credits
-print("  Fixing PHY4201 data damage (courseName, credits)...")
-r2, ok = fix_str_field_by_code(r2, 'PHY4201', 'courseName', PHY4201_NAME_FIX[0], PHY4201_NAME_FIX[1])
-if ok: print("    PHY4201: courseName fixed → '특수연구'")
-r2, ok = fix_int_field_by_code(r2, 'PHY4201', 'credits', 25, 3)
-if ok: print("    PHY4201: credits fixed → 3")
-
-# 2c. PHY4204 데이터 손상 수정: courseName + description + credits
-print("  Fixing PHY4204 data damage (courseName, description, credits)...")
-r2, ok = fix_str_field_by_code(r2, 'PHY4204', 'courseName', PHY4204_NAME_FIX[0], PHY4204_NAME_FIX[1])
-if ok: print("    PHY4204: courseName fixed → '졸업프로젝트'")
-r2, ok = fix_str_field_by_code(r2, 'PHY4204', 'description', PHY4204_NAME_FIX[0], PHY4204_DESC_FIX[1])
-if ok: print("    PHY4204: description fixed → '졸업프로젝트 (강의 3시간)'")
-r2, ok = fix_int_field_by_code(r2, 'PHY4204', 'credits', 25, 3)
-if ok: print("    PHY4204: credits fixed → 3")
-
-# 2d. countsTowardMajorCredits: True → False
-print("  Fixing countsTowardMajorCredits: True → False (7 courses)...")
-for code in COUNTS_FALSE:
-    r2, ok = fix_bool_field_by_code(r2, code, 'countsTowardMajorCredits', 'True', 'False')
-    if ok:
-        print(f"    {code}: countsTowardMajorCredits True → False")
-
-with open(f'{BASE}/data_round2.py', 'w', encoding='utf-8') as f:
-    f.write(r2)
-print("data_round2.py written.\n")
-
-# STEP 3: data_round4.py — add PHY job fits
-print("=== STEP 3: data_round4.py ===")
-with open(f'{BASE}/data_round4.py', encoding='utf-8') as f:
-    r4 = f.read()
-r4 = add_job_fits(r4, PHY_COURSE_JOB_FITS, 'PHY')
-with open(f'{BASE}/data_round4.py', 'w', encoding='utf-8') as f:
-    f.write(r4)
-print("data_round4.py written.\n")
-
-print("=== ALL PHY PATCHES APPLIED ===")

@@ -1,84 +1,4 @@
-#!/usr/bin/env python3
-"""apply_patches4.py — Apply BIO (생명과학과) patch."""
-
-# ── helpers ──────────────────────────────────────────────────────────
-def py_repr(obj):
-    if obj is None: return 'None'
-    if obj is True: return 'True'
-    if obj is False: return 'False'
-    if isinstance(obj, str):
-        s = obj.replace('\\', '\\\\').replace("'", "\\'")
-        return f"'{s}'"
-    if isinstance(obj, (int, float)): return repr(obj)
-    if isinstance(obj, list):
-        return '[' + ', '.join(py_repr(v) for v in obj) + ']'
-    if isinstance(obj, dict):
-        items = ', '.join(f"{py_repr(k)}: {py_repr(v)}" for k, v in obj.items())
-        return '{' + items + '}'
-    return repr(obj)
-
-
-def replace_credits(content, iri, new_credits_dict):
-    lines = content.split('\n')
-    for i, line in enumerate(lines):
-        if f"'iri': '{iri}'" not in line:
-            continue
-        start = line.find("'credits': {")
-        if start == -1:
-            print(f"  WARNING: no 'credits' for {iri}")
-            continue
-        credits_start = start + len("'credits': ")
-        depth, j = 0, credits_start
-        while j < len(line):
-            if line[j] == '{': depth += 1
-            elif line[j] == '}':
-                depth -= 1
-                if depth == 0:
-                    credits_end = j + 1; break
-            j += 1
-        lines[i] = line[:credits_start] + py_repr(new_credits_dict) + line[credits_end:]
-        print(f"  [OK] Replaced credits for {iri}")
-        break
-    return '\n'.join(lines)
-
-
-def fix_bool_field_by_code(content, code, field, old_val, new_val):
-    old_str = f"'{field}': {old_val}"
-    new_str = f"'{field}': {new_val}"
-    lines = content.split('\n')
-    for i, line in enumerate(lines):
-        if f"'courseCode': '{code}'" in line:
-            if old_str in line:
-                lines[i] = line.replace(old_str, new_str, 1)
-                return '\n'.join(lines), True
-            else:
-                print(f"  WARNING: {code} – '{old_str}' not found in line")
-                return '\n'.join(lines), False
-    print(f"  WARNING: courseCode '{code}' not found")
-    return content, False
-
-
-def add_job_fits(content, fits, label):
-    lines = content.split('\n')
-    in_list = False
-    for i, line in enumerate(lines):
-        if 'COURSE_JOB_FITS' in line and '= [' in line:
-            in_list = True
-        if in_list and line.strip() == ']':
-            inserts = []
-            for fit in fits:
-                cc = fit['courseCode']
-                ji = fit['jobIri']
-                wt = fit['weight']
-                inserts.append(f"    {{'courseCode': '{cc}', 'jobIri': '{ji}', 'weight': {wt}}},")
-            lines[i:i] = inserts
-            print(f"  [OK] Added {len(fits)} {label} job fits")
-            return '\n'.join(lines)
-    print("  WARNING: COURSE_JOB_FITS closing ']' not found")
-    return content
-
-
-# ── BIO patch data ───────────────────────────────────────────────────
+"""BIO (생명과학과) patch data."""
 
 DEPT_BIO_CREDITS_FULL = {
     # ── 전인교육 (공통) ──
@@ -239,13 +159,9 @@ DEPT_BIO_CREDITS_FULL = {
     },
 }
 
-
-# ── countsTowardMajorCredits True → False ────────────────────────────
-# 전공입문: BIO1101/1102/1105/1106 (입문과목은 전공학점 미포함)
-# 기타이수요건 제외: BIO4203 (전공학점 미포함)
+# 전공입문(BIO1101/1102/1105/1106) + 기타이수 제외(BIO4203): 전공학점 미포함
 COUNTS_FALSE = ['BIO1101', 'BIO1102', 'BIO1105', 'BIO1106', 'BIO4203']
 
-# ── COURSE_JOB_FITS ──────────────────────────────────────────────────
 BIO_COURSE_JOB_FITS = [
     # 전공필수 — 현대생물학실험 계열
     {"courseCode": "BIO2121", "jobIri": "Job_PM",        "weight": 0.60},
@@ -256,13 +172,11 @@ BIO_COURSE_JOB_FITS = [
     {"courseCode": "BIO3123", "jobIri": "Job_데이터분석", "weight": 0.60},
     {"courseCode": "BIO3124", "jobIri": "Job_PM",        "weight": 0.65},
     {"courseCode": "BIO3124", "jobIri": "Job_데이터분석", "weight": 0.60},
-
     # 전공필수 — 생화학
     {"courseCode": "BIO2131", "jobIri": "Job_데이터분석", "weight": 0.65},
     {"courseCode": "BIO2131", "jobIri": "Job_AI엔지니어", "weight": 0.60},
     {"courseCode": "BIO2132", "jobIri": "Job_데이터분석", "weight": 0.65},
     {"courseCode": "BIO2132", "jobIri": "Job_AI엔지니어", "weight": 0.60},
-
     # 분자·세포·유전 계열
     {"courseCode": "BIO2111", "jobIri": "Job_AI엔지니어", "weight": 0.65},
     {"courseCode": "BIO2111", "jobIri": "Job_데이터분석", "weight": 0.60},
@@ -280,7 +194,6 @@ BIO_COURSE_JOB_FITS = [
     {"courseCode": "BIO4721", "jobIri": "Job_데이터분석", "weight": 0.70},
     {"courseCode": "BIOG153", "jobIri": "Job_AI엔지니어", "weight": 0.85},
     {"courseCode": "BIOG153", "jobIri": "Job_데이터분석", "weight": 0.80},
-
     # 생화학·생리학 계열
     {"courseCode": "BIO2311", "jobIri": "Job_반도체",    "weight": 0.60},
     {"courseCode": "BIO2311", "jobIri": "Job_데이터분석", "weight": 0.55},
@@ -290,7 +203,6 @@ BIO_COURSE_JOB_FITS = [
     {"courseCode": "BIO4331", "jobIri": "Job_AI엔지니어", "weight": 0.65},
     {"courseCode": "BIOG322", "jobIri": "Job_데이터분석", "weight": 0.65},
     {"courseCode": "BIOG322", "jobIri": "Job_AI엔지니어", "weight": 0.60},
-
     # 미생물학 계열
     {"courseCode": "BIO2350", "jobIri": "Job_데이터분석", "weight": 0.60},
     {"courseCode": "BIO2350", "jobIri": "Job_AI엔지니어", "weight": 0.55},
@@ -299,24 +211,20 @@ BIO_COURSE_JOB_FITS = [
     {"courseCode": "BIO3711", "jobIri": "Job_데이터분석", "weight": 0.65},
     {"courseCode": "BIO3711", "jobIri": "Job_AI엔지니어", "weight": 0.60},
     {"courseCode": "BIO3712", "jobIri": "Job_데이터분석", "weight": 0.65},
-
     # 면역·종양학
     {"courseCode": "BIO4351", "jobIri": "Job_데이터분석", "weight": 0.70},
     {"courseCode": "BIO4351", "jobIri": "Job_AI엔지니어", "weight": 0.70},
     {"courseCode": "BIO4252", "jobIri": "Job_데이터분석", "weight": 0.70},
     {"courseCode": "BIO4252", "jobIri": "Job_AI엔지니어", "weight": 0.70},
-
     # 생물통계학 — 데이터 분석 핵심
     {"courseCode": "BIO4251", "jobIri": "Job_데이터분석", "weight": 0.95},
     {"courseCode": "BIO4251", "jobIri": "Job_AI엔지니어", "weight": 0.80},
-
     # 구조생물학·생물리학
     {"courseCode": "BIOG241", "jobIri": "Job_반도체",    "weight": 0.65},
     {"courseCode": "BIOG241", "jobIri": "Job_데이터분석", "weight": 0.65},
     {"courseCode": "BIOG241", "jobIri": "Job_AI엔지니어", "weight": 0.65},
     {"courseCode": "BIOG232", "jobIri": "Job_반도체",    "weight": 0.75},
     {"courseCode": "BIOG232", "jobIri": "Job_데이터분석", "weight": 0.65},
-
     # 식물생명과학 계열
     {"courseCode": "BIO2522", "jobIri": "Job_데이터분석", "weight": 0.55},
     {"courseCode": "BIO3311", "jobIri": "Job_데이터분석", "weight": 0.60},
@@ -324,18 +232,15 @@ BIO_COURSE_JOB_FITS = [
     {"courseCode": "BIO4911", "jobIri": "Job_데이터분석", "weight": 0.65},
     {"courseCode": "BIO4911", "jobIri": "Job_AI엔지니어", "weight": 0.65},
     {"courseCode": "BIOG511", "jobIri": "Job_데이터분석", "weight": 0.60},
-
     # 환경·발생
     {"courseCode": "BIO2701", "jobIri": "Job_컨설팅",    "weight": 0.60},
     {"courseCode": "BIO2701", "jobIri": "Job_기획",      "weight": 0.55},
-
     # 생명공학개론 / 기술사업화
     {"courseCode": "BIO3212", "jobIri": "Job_기획",      "weight": 0.75},
     {"courseCode": "BIO3212", "jobIri": "Job_컨설팅",    "weight": 0.65},
     {"courseCode": "BIOG001", "jobIri": "Job_기획",      "weight": 0.85},
     {"courseCode": "BIOG001", "jobIri": "Job_컨설팅",    "weight": 0.80},
     {"courseCode": "BIOG001", "jobIri": "Job_PM",        "weight": 0.75},
-
     # 현장실습 / 특수연구 / 응용바이오
     {"courseCode": "BIO4100", "jobIri": "Job_기획",      "weight": 0.70},
     {"courseCode": "BIO4100", "jobIri": "Job_PM",        "weight": 0.65},
@@ -343,49 +248,9 @@ BIO_COURSE_JOB_FITS = [
     {"courseCode": "BIO4921", "jobIri": "Job_데이터분석", "weight": 0.65},
     {"courseCode": "BIO4931", "jobIri": "Job_PM",        "weight": 0.80},
     {"courseCode": "BIO4931", "jobIri": "Job_반도체",    "weight": 0.60},
-
     # 특허·기술이전 / 진로설계
     {"courseCode": "BIO4203", "jobIri": "Job_컨설팅",    "weight": 0.70},
     {"courseCode": "BIO4203", "jobIri": "Job_기획",      "weight": 0.65},
     {"courseCode": "BIO3100", "jobIri": "Job_기획",      "weight": 0.65},
     {"courseCode": "BIO3100", "jobIri": "Job_교육",      "weight": 0.60},
 ]
-
-
-# ── MAIN ─────────────────────────────────────────────────────────────
-BASE = '/home/user/Sogangproject'
-
-# STEP 1: data_round1.py — expand Dept_BIO credits
-print("=== STEP 1: data_round1.py ===")
-with open(f'{BASE}/data_round1.py', encoding='utf-8') as f:
-    r1 = f.read()
-r1 = replace_credits(r1, 'Dept_BIO', DEPT_BIO_CREDITS_FULL)
-with open(f'{BASE}/data_round1.py', 'w', encoding='utf-8') as f:
-    f.write(r1)
-print("data_round1.py written.\n")
-
-# STEP 2: data_round2.py — fix countsTowardMajorCredits
-print("=== STEP 2: data_round2.py ===")
-with open(f'{BASE}/data_round2.py', encoding='utf-8') as f:
-    r2 = f.read()
-
-print("  Fixing countsTowardMajorCredits: True → False (5 courses)...")
-for code in COUNTS_FALSE:
-    r2, ok = fix_bool_field_by_code(r2, code, 'countsTowardMajorCredits', 'True', 'False')
-    if ok:
-        print(f"    {code}: countsTowardMajorCredits True → False")
-
-with open(f'{BASE}/data_round2.py', 'w', encoding='utf-8') as f:
-    f.write(r2)
-print("data_round2.py written.\n")
-
-# STEP 3: data_round4.py — add BIO job fits
-print("=== STEP 3: data_round4.py ===")
-with open(f'{BASE}/data_round4.py', encoding='utf-8') as f:
-    r4 = f.read()
-r4 = add_job_fits(r4, BIO_COURSE_JOB_FITS, 'BIO')
-with open(f'{BASE}/data_round4.py', 'w', encoding='utf-8') as f:
-    f.write(r4)
-print("data_round4.py written.\n")
-
-print("=== ALL BIO PATCHES APPLIED ===")

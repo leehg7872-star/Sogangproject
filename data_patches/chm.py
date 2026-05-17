@@ -1,101 +1,4 @@
-#!/usr/bin/env python3
-"""apply_patches3.py — Apply CHM (화학과) patch."""
-
-# ── helpers ──────────────────────────────────────────────────────────
-def py_repr(obj):
-    if obj is None: return 'None'
-    if obj is True: return 'True'
-    if obj is False: return 'False'
-    if isinstance(obj, str):
-        s = obj.replace('\\', '\\\\').replace("'", "\\'")
-        return f"'{s}'"
-    if isinstance(obj, (int, float)): return repr(obj)
-    if isinstance(obj, list):
-        return '[' + ', '.join(py_repr(v) for v in obj) + ']'
-    if isinstance(obj, dict):
-        items = ', '.join(f"{py_repr(k)}: {py_repr(v)}" for k, v in obj.items())
-        return '{' + items + '}'
-    return repr(obj)
-
-
-def replace_credits(content, iri, new_credits_dict):
-    lines = content.split('\n')
-    for i, line in enumerate(lines):
-        if f"'iri': '{iri}'" not in line:
-            continue
-        start = line.find("'credits': {")
-        if start == -1:
-            print(f"  WARNING: no 'credits' for {iri}")
-            continue
-        credits_start = start + len("'credits': ")
-        depth, j = 0, credits_start
-        while j < len(line):
-            if line[j] == '{': depth += 1
-            elif line[j] == '}':
-                depth -= 1
-                if depth == 0:
-                    credits_end = j + 1; break
-            j += 1
-        lines[i] = line[:credits_start] + py_repr(new_credits_dict) + line[credits_end:]
-        print(f"  [OK] Replaced credits for {iri}")
-        break
-    return '\n'.join(lines)
-
-
-def fix_str_field_by_code(content, code, field, old_val, new_val):
-    old_str = f"'{field}': '{old_val}'"
-    new_str = f"'{field}': '{new_val}'"
-    lines = content.split('\n')
-    for i, line in enumerate(lines):
-        if f"'courseCode': '{code}'" in line:
-            if old_str in line:
-                lines[i] = line.replace(old_str, new_str, 1)
-                return '\n'.join(lines), True
-            else:
-                print(f"  WARNING: {code} – '{old_str}' not found in line")
-                return '\n'.join(lines), False
-    print(f"  WARNING: courseCode '{code}' not found")
-    return content, False
-
-
-def fix_bool_field_by_code(content, code, field, old_val, new_val):
-    old_str = f"'{field}': {old_val}"
-    new_str = f"'{field}': {new_val}"
-    lines = content.split('\n')
-    for i, line in enumerate(lines):
-        if f"'courseCode': '{code}'" in line:
-            if old_str in line:
-                lines[i] = line.replace(old_str, new_str, 1)
-                return '\n'.join(lines), True
-            else:
-                print(f"  WARNING: {code} – '{old_str}' not found in line")
-                return '\n'.join(lines), False
-    print(f"  WARNING: courseCode '{code}' not found")
-    return content, False
-
-
-def add_job_fits(content, fits, label):
-    lines = content.split('\n')
-    in_list = False
-    for i, line in enumerate(lines):
-        if 'COURSE_JOB_FITS' in line and '= [' in line:
-            in_list = True
-        if in_list and line.strip() == ']':
-            inserts = []
-            for fit in fits:
-                cc = fit['courseCode']
-                ji = fit['jobIri']
-                wt = fit['weight']
-                inserts.append(f"    {{'courseCode': '{cc}', 'jobIri': '{ji}', 'weight': {wt}}},")
-
-            lines[i:i] = inserts
-            print(f"  [OK] Added {len(fits)} {label} job fits")
-            return '\n'.join(lines)
-    print("  WARNING: COURSE_JOB_FITS closing ']' not found")
-    return content
-
-
-# ── CHM patch data ───────────────────────────────────────────────────
+"""CHM (화학과) patch data."""
 
 DEPT_CHM_CREDITS_FULL = {
     # ── 전인교육 (공통) ──
@@ -270,20 +173,15 @@ DEPT_CHM_CREDITS_FULL = {
     },
 }
 
-
-# ── graduationCategory corrections ──────────────────────────────────
 # CHM2351/CHM2401/CHM2451: 전공선택 → 전공필수
 # CHM2152/CHM2252/CHM2352/CHM2651: 전공선택 → 전공필수선택
-CAT_TO_REQUIRED = ['CHM2351', 'CHM2401', 'CHM2451']
+CAT_TO_REQUIRED      = ['CHM2351', 'CHM2401', 'CHM2451']
 CAT_TO_ELECTIVE_CORE = ['CHM2152', 'CHM2252', 'CHM2352', 'CHM2651']
 
-# ── countsTowardMajorCredits True → False ────────────────────────────
-# 전공입문: CHM1001/1002/1051/1052 (입문과목은 전공학점 미포함)
-# 기타이수요건 제외: CHM4051/4052/4203 (전공학점 미포함)
+# 전공입문(CHM1001/1002/1051/1052) + 기타이수 제외(CHM4051/4052/4203): 전공학점 미포함
 COUNTS_FALSE = ['CHM1001', 'CHM1002', 'CHM1051', 'CHM1052',
                 'CHM4051', 'CHM4052', 'CHM4203']
 
-# ── COURSE_JOB_FITS ──────────────────────────────────────────────────
 CHM_COURSE_JOB_FITS = [
     # 분석화학 계열
     {"courseCode": "CHM2101", "jobIri": "Job_반도체",    "weight": 0.75},
@@ -296,7 +194,6 @@ CHM_COURSE_JOB_FITS = [
     {"courseCode": "CHM2152", "jobIri": "Job_데이터분석", "weight": 0.65},
     {"courseCode": "CHMG101", "jobIri": "Job_반도체",    "weight": 0.80},
     {"courseCode": "CHMG101", "jobIri": "Job_데이터분석", "weight": 0.70},
-
     # 물리화학 계열
     {"courseCode": "CHM2201", "jobIri": "Job_반도체",    "weight": 0.80},
     {"courseCode": "CHM2201", "jobIri": "Job_AI엔지니어", "weight": 0.60},
@@ -312,7 +209,6 @@ CHM_COURSE_JOB_FITS = [
     {"courseCode": "CHMG201", "jobIri": "Job_데이터분석", "weight": 0.65},
     {"courseCode": "CHMG202", "jobIri": "Job_반도체",    "weight": 0.80},
     {"courseCode": "CHMG202", "jobIri": "Job_데이터분석", "weight": 0.65},
-
     # 유기화학 계열
     {"courseCode": "CHM2301", "jobIri": "Job_반도체",    "weight": 0.70},
     {"courseCode": "CHM2302", "jobIri": "Job_반도체",    "weight": 0.70},
@@ -323,7 +219,6 @@ CHM_COURSE_JOB_FITS = [
     {"courseCode": "CHM2332", "jobIri": "Job_반도체",    "weight": 0.70},
     {"courseCode": "CHMG301", "jobIri": "Job_반도체",    "weight": 0.75},
     {"courseCode": "CHMG302", "jobIri": "Job_반도체",    "weight": 0.75},
-
     # 무기화학 계열
     {"courseCode": "CHM2401", "jobIri": "Job_반도체",    "weight": 0.85},
     {"courseCode": "CHM2402", "jobIri": "Job_반도체",    "weight": 0.85},
@@ -331,11 +226,9 @@ CHM_COURSE_JOB_FITS = [
     {"courseCode": "CHMG401", "jobIri": "Job_반도체",    "weight": 0.90},
     {"courseCode": "CHMG402", "jobIri": "Job_반도체",    "weight": 0.90},
     {"courseCode": "CHMG402", "jobIri": "Job_PM",        "weight": 0.60},
-
     # 고분자화학
     {"courseCode": "CHM2501", "jobIri": "Job_반도체",    "weight": 0.80},
     {"courseCode": "CHM2501", "jobIri": "Job_컨설팅",    "weight": 0.55},
-
     # 생화학 계열
     {"courseCode": "CHM2601", "jobIri": "Job_데이터분석", "weight": 0.60},
     {"courseCode": "CHM2601", "jobIri": "Job_AI엔지니어", "weight": 0.55},
@@ -345,7 +238,6 @@ CHM_COURSE_JOB_FITS = [
     {"courseCode": "CHMG501", "jobIri": "Job_AI엔지니어", "weight": 0.60},
     {"courseCode": "CHMG502", "jobIri": "Job_데이터분석", "weight": 0.65},
     {"courseCode": "CHMG502", "jobIri": "Job_AI엔지니어", "weight": 0.60},
-
     # 연구/프로젝트/캡스톤
     {"courseCode": "CHM4051", "jobIri": "Job_PM",        "weight": 0.80},
     {"courseCode": "CHM4051", "jobIri": "Job_반도체",    "weight": 0.70},
@@ -353,16 +245,13 @@ CHM_COURSE_JOB_FITS = [
     {"courseCode": "CHM4052", "jobIri": "Job_반도체",    "weight": 0.70},
     {"courseCode": "CHM4055", "jobIri": "Job_PM",        "weight": 0.85},
     {"courseCode": "CHM4055", "jobIri": "Job_반도체",    "weight": 0.75},
-
     # 화학 AI / 데이터
     {"courseCode": "CHM4053", "jobIri": "Job_AI엔지니어", "weight": 0.90},
     {"courseCode": "CHM4053", "jobIri": "Job_데이터분석", "weight": 0.85},
     {"courseCode": "CHM4053", "jobIri": "Job_반도체",    "weight": 0.70},
-
     # 화학기기 종합설계
     {"courseCode": "CHM4054", "jobIri": "Job_반도체",    "weight": 0.80},
     {"courseCode": "CHM4054", "jobIri": "Job_PM",        "weight": 0.70},
-
     # 현장실습 / 특허
     {"courseCode": "CHM4056", "jobIri": "Job_기획",      "weight": 0.70},
     {"courseCode": "CHM4056", "jobIri": "Job_PM",        "weight": 0.65},
@@ -370,61 +259,9 @@ CHM_COURSE_JOB_FITS = [
     {"courseCode": "CHM4057", "jobIri": "Job_PM",        "weight": 0.65},
     {"courseCode": "CHM4203", "jobIri": "Job_컨설팅",    "weight": 0.70},
     {"courseCode": "CHM4203", "jobIri": "Job_기획",      "weight": 0.65},
-
     # 진로설계 / 논문작성
     {"courseCode": "CHM3100", "jobIri": "Job_기획",      "weight": 0.65},
     {"courseCode": "CHM3100", "jobIri": "Job_교육",      "weight": 0.60},
     {"courseCode": "CHMG601", "jobIri": "Job_교육",      "weight": 0.70},
     {"courseCode": "CHMG601", "jobIri": "Job_PR언론",    "weight": 0.55},
 ]
-
-
-# ── MAIN ─────────────────────────────────────────────────────────────
-BASE = '/home/user/Sogangproject'
-
-# STEP 1: data_round1.py — expand Dept_CHM credits
-print("=== STEP 1: data_round1.py ===")
-with open(f'{BASE}/data_round1.py', encoding='utf-8') as f:
-    r1 = f.read()
-r1 = replace_credits(r1, 'Dept_CHM', DEPT_CHM_CREDITS_FULL)
-with open(f'{BASE}/data_round1.py', 'w', encoding='utf-8') as f:
-    f.write(r1)
-print("data_round1.py written.\n")
-
-# STEP 2: data_round2.py — fix course classifications
-print("=== STEP 2: data_round2.py ===")
-with open(f'{BASE}/data_round2.py', encoding='utf-8') as f:
-    r2 = f.read()
-
-print("  Fixing graduationCategory: 전공선택 → 전공필수 (3 courses)...")
-for code in CAT_TO_REQUIRED:
-    r2, ok = fix_str_field_by_code(r2, code, 'graduationCategory', '전공선택', '전공필수')
-    if ok:
-        print(f"    {code}: 전공선택 → 전공필수")
-
-print("  Fixing graduationCategory: 전공선택 → 전공필수선택 (4 courses)...")
-for code in CAT_TO_ELECTIVE_CORE:
-    r2, ok = fix_str_field_by_code(r2, code, 'graduationCategory', '전공선택', '전공필수선택')
-    if ok:
-        print(f"    {code}: 전공선택 → 전공필수선택")
-
-print("  Fixing countsTowardMajorCredits: True → False (7 courses)...")
-for code in COUNTS_FALSE:
-    r2, ok = fix_bool_field_by_code(r2, code, 'countsTowardMajorCredits', 'True', 'False')
-    if ok:
-        print(f"    {code}: countsTowardMajorCredits True → False")
-
-with open(f'{BASE}/data_round2.py', 'w', encoding='utf-8') as f:
-    f.write(r2)
-print("data_round2.py written.\n")
-
-# STEP 3: data_round4.py — add CHM job fits
-print("=== STEP 3: data_round4.py ===")
-with open(f'{BASE}/data_round4.py', encoding='utf-8') as f:
-    r4 = f.read()
-r4 = add_job_fits(r4, CHM_COURSE_JOB_FITS, 'CHM')
-with open(f'{BASE}/data_round4.py', 'w', encoding='utf-8') as f:
-    f.write(r4)
-print("data_round4.py written.\n")
-
-print("=== ALL CHM PATCHES APPLIED ===")
