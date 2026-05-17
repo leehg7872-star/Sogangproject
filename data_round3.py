@@ -58,6 +58,7 @@ CODE_SHARES = [
     {'code_a': 'ECO3010', 'code_b': 'TIC4003', 'note': '국제무역론 ↔ International Trade Theory and Policy (전공선택)'},
     {'code_a': 'ECO3011', 'code_b': 'TIC4004', 'note': '국제금융론 ↔ International Finance Theory and Policy (전공선택)'},
     {'code_a': 'MGT4510', 'code_b': 'TIC4015', 'note': '국제마케팅론 ↔ International Marketing (전공선택)'},
+    {'code_a': 'MAT3020', 'code_b': 'MAT2410', 'note': 'MAT3020 통계학입문 ↔ MAT2410 응용수학Ⅰ (강의 내용 유사). 2과목 모두 수강 시 1과목만 전공 및 졸업학점으로 인정 (요람 [다] ①).'},
 ]
 
 # 코드쉐어 관계 수: 29쌍
