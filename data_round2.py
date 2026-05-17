@@ -2292,3 +2292,7 @@ COURSES = [
     {'courseCode': 'KLC1002', 'courseName': '한국어의사소통Ⅱ', 'credits': 3, 'courseType': 'IntroductoryCourse', 'graduationCategory': '전공입문', 'countsTowardMajorCredits': False, 'dept_iri': 'Dept_GKE', 'prerequisites': [], 'semOpen1': True, 'semOpen2': True, 'yearMin': 1, 'avgGpa': None, 'description': '한국어의사소통Ⅱ (강의 3시간) — 국제학생 전용', 'subArea': '전공입문', 'hoursInfo': '강의 3시간'},
     {'courseCode': 'STS2006', 'courseName': '미적분학Ⅱ', 'credits': 3, 'courseType': 'IntroductoryCourse', 'graduationCategory': '전공입문', 'countsTowardMajorCredits': False, 'dept_iri': 'Dept_MAT', 'prerequisites': ['STS2005'], 'semOpen1': True, 'semOpen2': True, 'yearMin': 1, 'avgGpa': None, 'description': '미적분학Ⅱ (강의 3시간)', 'subArea': '전공입문', 'hoursInfo': '강의 3시간'},
 ]
+
+# 공통교양 과목은 COURSES 에 통합 수록 (dept_iri='Dept_LIB', graduationCategory='공통필수'|'공통선택')
+COMMON_COURSES = []
+
