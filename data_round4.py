@@ -1137,6 +1137,16 @@ COURSE_JOB_FITS: list[dict] = [
     {'courseCode': 'PHY3510', 'jobIri': 'Job_PM', 'weight': 0.65},
     {'courseCode': 'PHY3515', 'jobIri': 'Job_기획', 'weight': 0.65},
     {'courseCode': 'PHY3515', 'jobIri': 'Job_교육', 'weight': 0.6},
+    {'courseCode': 'SCI1011', 'jobIri': 'Job_데이터분석', 'weight': 0.6},
+    {'courseCode': 'SCI1011', 'jobIri': 'Job_AI엔지니어', 'weight': 0.55},
+    {'courseCode': 'SCI1012', 'jobIri': 'Job_반도체', 'weight': 0.6},
+    {'courseCode': 'SCI1012', 'jobIri': 'Job_데이터분석', 'weight': 0.5},
+    {'courseCode': 'SCI1013', 'jobIri': 'Job_반도체', 'weight': 0.6},
+    {'courseCode': 'SCI1014', 'jobIri': 'Job_데이터분석', 'weight': 0.55},
+    {'courseCode': 'SCI1014', 'jobIri': 'Job_AI엔지니어', 'weight': 0.5},
+    {'courseCode': 'SCI1021', 'jobIri': 'Job_AI엔지니어', 'weight': 0.75},
+    {'courseCode': 'SCI1021', 'jobIri': 'Job_데이터분석', 'weight': 0.7},
+    {'courseCode': 'SCI1021', 'jobIri': 'Job_소프트웨어', 'weight': 0.6},
 ]
 
 # ── 전공-직무 연결 (TARGETS_JOB_ROLE) ────────────────────────────
