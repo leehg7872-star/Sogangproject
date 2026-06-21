@@ -2,13 +2,15 @@
 utils/llm.py — LLM 호출 래퍼 (_llm, _llm_json)
 """
 
-import re, json
+import os, re, json
 import deps
+
+_MODEL = os.getenv("GATEWAY_MODEL", "claude-sonnet-4-5")
 
 
 async def llm(system: str, user: str, temperature: float = 0.3, max_tokens: int = 1200) -> str:
     resp = await deps.openai_client.chat.completions.create(
-        model="claude-sonnet-4-20250514",
+        model=_MODEL,
         max_tokens=max_tokens,
         temperature=temperature,
         messages=[

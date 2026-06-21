@@ -74,7 +74,8 @@ async def root():
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "db": config.DB_PATH, "model": "claude-sonnet-4-20250514"}
+    from utils.llm import _MODEL
+    return {"status": "ok", "db": config.DB_PATH, "model": _MODEL}
 
 
 # ── 보조 그래프 조회 API ───────────────────────────────────────
