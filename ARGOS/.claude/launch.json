@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "argos-server",
+      "runtimeExecutable": "py",
+      "runtimeArgs": ["-m", "argos.cli", "serve", "--data", "data/argos_graph.json", "--port", "8787"],
+      "port": 8787
+    }
+  ]
+}

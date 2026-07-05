@@ -1,0 +1,381 @@
+{
+  "name": "ARGOS",
+  "description": "Aerospace Reasoning & Graph Ontology System synthetic ontology",
+  "classification": "PUBLIC SYNTHETIC DATA ONLY",
+  "objectTypes": {
+    "AirBase": {
+      "pk": "baseId",
+      "properties": [
+        "name",
+        "lat",
+        "lon",
+        "protection",
+        "capacity"
+      ]
+    },
+    "Runway": {
+      "pk": "rwyId",
+      "properties": [
+        "baseId",
+        "heading",
+        "lengthM",
+        "surfaceStatus"
+      ]
+    },
+    "Squadron": {
+      "pk": "sqdnId",
+      "properties": [
+        "name",
+        "airframe",
+        "baseId",
+        "manning",
+        "missionType"
+      ]
+    },
+    "Aircraft": {
+      "pk": "tailNo",
+      "properties": [
+        "airframe",
+        "status",
+        "loadout",
+        "fuelPct",
+        "readiness"
+      ]
+    },
+    "Pilot": {
+      "pk": "pilotId",
+      "properties": [
+        "callsign",
+        "quals",
+        "flightHours",
+        "status"
+      ]
+    },
+    "MaintRecord": {
+      "pk": "maintId",
+      "properties": [
+        "tailNo",
+        "issue",
+        "severity",
+        "status",
+        "openedAt"
+      ]
+    },
+    "ATO": {
+      "pk": "atoId",
+      "properties": [
+        "day",
+        "status"
+      ]
+    },
+    "Mission": {
+      "pk": "msnId",
+      "properties": [
+        "callsign",
+        "missionType",
+        "route",
+        "start",
+        "end",
+        "status"
+      ]
+    },
+    "Target": {
+      "pk": "tgtId",
+      "properties": [
+        "name",
+        "lat",
+        "lon",
+        "category",
+        "priority",
+        "bdaStatus"
+      ]
+    },
+    "SAMSite": {
+      "pk": "samId",
+      "properties": [
+        "system",
+        "lat",
+        "lon",
+        "rangeKm",
+        "status"
+      ]
+    },
+    "ThreatEvent": {
+      "pk": "tevId",
+      "properties": [
+        "eventType",
+        "lat",
+        "lon",
+        "severity",
+        "firstSeen",
+        "status"
+      ]
+    },
+    "Track": {
+      "pk": "trkId",
+      "properties": [
+        "lat",
+        "lon",
+        "speedKt",
+        "heading",
+        "identity",
+        "lastSeen"
+      ]
+    },
+    "Satellite": {
+      "pk": "noradId",
+      "properties": [
+        "name",
+        "tle",
+        "sensorType",
+        "status"
+      ]
+    },
+    "GroundStation": {
+      "pk": "gsId",
+      "properties": [
+        "name",
+        "lat",
+        "lon",
+        "band",
+        "status"
+      ]
+    },
+    "SpaceEvent": {
+      "pk": "sevId",
+      "properties": [
+        "eventType",
+        "satelliteId",
+        "tca",
+        "missKm",
+        "severity"
+      ]
+    },
+    "Sensor": {
+      "pk": "snsrId",
+      "properties": [
+        "sensorType",
+        "lat",
+        "lon",
+        "rangeKm",
+        "status"
+      ]
+    },
+    "WeatherReport": {
+      "pk": "wxId",
+      "properties": [
+        "baseId",
+        "observedAt",
+        "ceilingFt",
+        "windKt",
+        "status"
+      ]
+    },
+    "AirspaceZone": {
+      "pk": "zoneId",
+      "properties": [
+        "name",
+        "lat",
+        "lon",
+        "radiusKm",
+        "floorFt",
+        "ceilingFt",
+        "status"
+      ]
+    }
+  },
+  "linkTypes": [
+    {
+      "name": "ASSIGNED_TO",
+      "from": "Aircraft",
+      "to": "Squadron"
+    },
+    {
+      "name": "BASED_AT",
+      "from": "Squadron",
+      "to": "AirBase"
+    },
+    {
+      "name": "PILOT_ASSIGNED",
+      "from": "Pilot",
+      "to": "Aircraft"
+    },
+    {
+      "name": "PILOT_IN_SQUADRON",
+      "from": "Pilot",
+      "to": "Squadron"
+    },
+    {
+      "name": "MAINT_TARGET",
+      "from": "MaintRecord",
+      "to": "Aircraft"
+    },
+    {
+      "name": "HAS_RUNWAY",
+      "from": "AirBase",
+      "to": "Runway"
+    },
+    {
+      "name": "FLOWN_BY",
+      "from": "Mission",
+      "to": "Aircraft"
+    },
+    {
+      "name": "TASKS",
+      "from": "ATO",
+      "to": "Mission"
+    },
+    {
+      "name": "STRIKES",
+      "from": "Mission",
+      "to": "Target"
+    },
+    {
+      "name": "DEPARTS_FROM",
+      "from": "Mission",
+      "to": "AirBase"
+    },
+    {
+      "name": "RECOVERS_AT",
+      "from": "Mission",
+      "to": "AirBase"
+    },
+    {
+      "name": "TRANSITS",
+      "from": "Mission",
+      "to": "AirspaceZone"
+    },
+    {
+      "name": "ESCORTS",
+      "from": "Mission",
+      "to": "Mission"
+    },
+    {
+      "name": "REFUELS",
+      "from": "Mission",
+      "to": "Mission"
+    },
+    {
+      "name": "THREAT_RING",
+      "from": "SAMSite",
+      "to": "AirspaceZone"
+    },
+    {
+      "name": "SOURCE_SITE",
+      "from": "ThreatEvent",
+      "to": "SAMSite"
+    },
+    {
+      "name": "IMPACTS",
+      "from": "ThreatEvent",
+      "to": "Mission"
+    },
+    {
+      "name": "RELATED_TRACK",
+      "from": "ThreatEvent",
+      "to": "Track"
+    },
+    {
+      "name": "DETECTED",
+      "from": "Sensor",
+      "to": "ThreatEvent"
+    },
+    {
+      "name": "SENSOR_AT",
+      "from": "Sensor",
+      "to": "AirBase"
+    },
+    {
+      "name": "WX_CONSTRAINS",
+      "from": "WeatherReport",
+      "to": "AirBase"
+    },
+    {
+      "name": "COVERS",
+      "from": "Satellite",
+      "to": "Target"
+    },
+    {
+      "name": "DOWNLINKS",
+      "from": "Satellite",
+      "to": "GroundStation"
+    },
+    {
+      "name": "SPACE_TARGETS",
+      "from": "SpaceEvent",
+      "to": "Satellite"
+    }
+  ],
+  "actionTypes": {
+    "CreateThreatEvent": {
+      "authority": "situation-officer",
+      "parameters": [
+        "eventType",
+        "lat",
+        "lon",
+        "severity"
+      ]
+    },
+    "RetaskMission": {
+      "authority": "mission-planner",
+      "parameters": [
+        "missionIds",
+        "targetId",
+        "route"
+      ]
+    },
+    "DivertAircraft": {
+      "authority": "mission-planner",
+      "parameters": [
+        "missionIds",
+        "candidateBase"
+      ]
+    },
+    "AssignInterceptor": {
+      "authority": "air-defense-officer",
+      "parameters": [
+        "threatEventId",
+        "priority"
+      ]
+    },
+    "RequestSatCollection": {
+      "authority": "space-operations",
+      "parameters": [
+        "satelliteId",
+        "targetIds"
+      ]
+    },
+    "UpdateReadiness": {
+      "authority": "maintenance-control",
+      "parameters": [
+        "assetId",
+        "status"
+      ]
+    },
+    "RecordDecision": {
+      "authority": "battle-captain",
+      "parameters": [
+        "decision",
+        "rationale"
+      ]
+    }
+  },
+  "functions": {
+    "fnThreatIntersect": {
+      "input": "ThreatEvent",
+      "output": "ranked Mission impacts with distanceKm and severity"
+    },
+    "fnCoverageWindow": {
+      "input": "Target and/or Satellite filters",
+      "output": "Satellite to Target visibility windows"
+    },
+    "fnReadinessRollup": {
+      "input": "Aircraft, Squadron, AirBase readiness links",
+      "output": "base-level readiness rate"
+    },
+    "fnDeconflict": {
+      "input": "Mission route and AirspaceZone restrictions",
+      "output": "clear/conflict status with conflicting zones"
+    }
+  }
+}

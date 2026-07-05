@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ARGOS COP</title>
+    <link rel="stylesheet" href="/styles.css?v=scenario-15">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>ARGOS</h1>
+        <p>Aerospace Reasoning & Graph Ontology System</p>
+      </div>
+      <div class="stats" id="stats">Loading ontology...</div>
+    </header>
+    <main class="layout">
+      <section class="map-panel">
+        <div class="panel-title">
+          <h2>Common Operating Picture</h2>
+          <span>한반도 공중·우주 상황도</span>
+        </div>
+        <div class="map-toolbar">
+          <div class="scope-controls" aria-label="operating picture scope">
+            <button class="scope" data-scope="all">All</button>
+            <button class="scope active" data-scope="south">South Korea</button>
+            <button class="scope" data-scope="north">North Korea</button>
+          </div>
+          <button class="layer active" data-layer="routes">임무경로</button>
+          <button class="layer active" data-layer="tracks">항적</button>
+          <button class="layer active" data-layer="threats">위협권</button>
+          <button class="layer active" data-layer="satellites">위성</button>
+          <div class="zoom-controls" aria-label="map zoom controls">
+            <button id="zoomOut" title="축소">-</button>
+            <button id="zoomReset" title="전체">전체</button>
+            <button id="zoomIn" title="확대">+</button>
+            <select id="focusRegion" aria-label="focus region">
+              <option value="all">전국</option>
+              <option value="gangneung">강릉</option>
+              <option value="seoul">수도권</option>
+              <option value="busan">부산권</option>
+              <option value="jeju">제주</option>
+            </select>
+          </div>
+        </div>
+        <div class="map" id="map"></div>
+        <div class="object-inspector" id="inspector">
+          <div class="empty-state">지도 위 객체나 이벤트를 선택하세요.</div>
+        </div>
+      </section>
+      <section class="timeline-panel">
+        <div class="panel-title">
+          <h2>Event Timeline</h2>
+          <div class="timeline-controls">
+            <button class="time-filter active" data-filter="all">All</button>
+            <button class="time-filter" data-filter="ThreatEvent">Threat</button>
+            <button class="time-filter" data-filter="SpaceEvent">Space</button>
+            <button id="aarBtn">AAR</button>
+          </div>
+        </div>
+        <div class="timeline-ruler">
+          <span>Watch</span>
+          <span>Decide</span>
+          <span>Review</span>
+        </div>
+        <div class="timeline" id="timeline"></div>
+      </section>
+      <section class="agent-panel">
+        <div class="panel-title">
+          <h2>Response Agent</h2>
+          <div class="agent-actions">
+            <span id="chatStatus" class="chat-status">Ollama 연결 확인 중...</span>
+            <button id="schemaBtn">Schema</button>
+            <button id="resetChatBtn">New Chat</button>
+          </div>
+        </div>
+        <div class="quick">
+          <button data-q="K-2 비행장 상태 알려줘">K-2 상태</button>
+          <button data-q="미식별 항적 보여줘">항적</button>
+          <button data-q="TEV-0001 영향과 지휘 결심 권고">결심권고</button>
+          <button data-q="오늘 ATO 임무 중 정비 이슈 있는 기체에 배정된 것은? 대체 기체까지 찾아줘">정비대체</button>
+        </div>
+        <div class="agent-context" id="agentContext">선택된 객체 없음</div>
+        <div class="chat" id="chat" aria-live="polite"></div>
+        <form id="askForm" class="ask">
+          <input id="question" autocomplete="off" placeholder="ARGOS에게 자유롭게 물어보세요">
+          <button id="askSubmitBtn">Ask</button>
+        </form>
+      </section>
+    </main>
+    <script src="/app.js?v=scenario-15"></script>
+  </body>
+</html>
