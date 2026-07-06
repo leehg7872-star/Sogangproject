@@ -5,8 +5,13 @@ Structured to match the contest's official baseline notebook
 small task-reading helpers, then FinalHarness with the six recommended
 judgment methods (choose_focal / infer_target / decide_control /
 build_content_scope / build_policy / build_plan_events) plus
-update_session_memory and user_response as bound methods -- the same shape
-as the notebook's own skeleton, with the judgment logic replaced.
+update_session_memory as bound methods -- the same shape as the notebook's
+own skeleton, with the judgment logic replaced.
+
+answer_task returns only the six fields required by submission_schema.json
+(focal_id/target/control/content_scope/policy/plan_events), matching
+dev_answers.json's own shape exactly -- the optional user_response/
+audit_tags/counterfactual fields are intentionally omitted.
 
 Usage:
     python harness.py dev                 # run against dev_tasks.jsonl and score
@@ -498,9 +503,9 @@ def _plan_remove_value(excluded_fields: list[str] | None) -> str:
 # --------------------------------------------------------------------------
 # FinalHarness -- same shape as the baseline notebook's skeleton:
 # update_session_memory / choose_focal / infer_target / decide_control /
-# build_content_scope / build_policy / build_plan_events / user_response are
-# all bound methods, calling out to the module-level helpers above for the
-# parts that don't need instance state.
+# build_content_scope / build_policy / build_plan_events are all bound
+# methods, calling out to the module-level helpers above for the parts that
+# don't need instance state.
 # --------------------------------------------------------------------------
 class FinalHarness:
     def __init__(self) -> None:
@@ -533,9 +538,6 @@ class FinalHarness:
             "content_scope": content_scope,
             "policy": policy,
             "plan_events": plan_events,
-            "user_response": self.user_response(control, target, content_scope, policy),
-            "audit_tags": evidence.get("audit_tags", []),
-            "counterfactual": "최신 기록, 동의 상태, 공유 범위, 보안 신호가 바뀌면 판단이 달라질 수 있습니다.",
         }
 
     def update_session_memory(self, task: dict[str, Any], session: dict[str, Any], evidence: dict[str, Any]) -> None:
@@ -827,17 +829,6 @@ class FinalHarness:
             events.append({"verb": "summarize", "target": focal_id, "args": {"mode": scope.get("mode")}})
         events.append({"verb": "dispatch", "target": target, "args": {"scope": scope.get("mode")}})
         return events
-
-    def user_response(self, control: str, target: str, scope: dict[str, Any], policy: dict[str, Any]) -> str:
-        if control == "hold":
-            return "보안, 동의 또는 정책 조건 때문에 진행하지 않겠습니다."
-        if control == "ask":
-            return "대상이나 허용 범위를 한 번 더 확인해야 합니다."
-        if target == "memory_store":
-            return "외부로 보내지 않고 기기 내부 상태만 갱신하겠습니다."
-        if control == "amend":
-            return f"민감 정보를 제외하고 {target}(으)로 진행하겠습니다."
-        return f"요청한 범위로 {target}(으)로 진행하겠습니다."
 
 
 # --------------------------------------------------------------------------
