@@ -286,6 +286,23 @@ def _resolve_focal_via_marker_chain(rm: dict[str, Any], object_by_ref: dict[str,
 
 
 _ORDINAL_INDEX = {"첫": 0, "두": 1, "세": 2, "네": 3}
+# Native-Korean counting ordinals ("둘째" vs "두 번째") show up as an
+# alternate phrasing of the same confirmed-candidate template.
+_NATIVE_ORDINAL_INDEX = {"첫": 0, "둘": 1, "셋": 2, "넷": 3}
+
+# Several distinct sentence templates all narrate the same underlying fact
+# ("of these candidates, exactly one is the currently-confirmed one"), each
+# either (a) naming the confirmed WM-code directly, or (b) giving an ordered
+# list plus an ordinal/positional pointer into it. All were found verbatim
+# (only the WM-codes vary) across hundreds of screening tasks that dev's
+# original single template never exhibited.
+_DIRECT_CONFIRMED_PATTERNS = (
+    re.compile(r"최종\s*승인\s*후보\s*(WM-\d+)"),
+    re.compile(r"ref\s*(?:는|은)?\s*(WM-\d+)\s*(?:로|으로)\s*고정"),
+    re.compile(r"(WM-\d+)\s*만\s*통과"),
+    re.compile(r"(?:유지된|승인\s*상태가\s*유지된)\s*참조는\s*(WM-\d+)"),
+    re.compile(r"binding\s*(?:은|는)?\s*(WM-\d+)\s*(?:을|를)?\s*(?:현재\s*턴의)?\s*참조로\s*지정"),
+)
 
 
 def _resolve_focal_via_history_text(task: dict[str, Any], object_by_ref: dict[str, dict[str, Any]]) -> dict[str, Any] | None:
@@ -296,29 +313,38 @@ def _resolve_focal_via_history_text(task: dict[str, Any], object_by_ref: dict[st
     )
     texts = [str(h.get("summary", "")) for h in history] + [str(task.get("prompt", ""))]
     for text in texts:
-        m = re.search(r"최종\s*승인\s*후보\s*(WM-\d+)", text)
-        if m and m.group(1) in object_by_ref:
-            return object_by_ref[m.group(1)]
+        for pattern in _DIRECT_CONFIRMED_PATTERNS:
+            m = pattern.search(text)
+            if m and m.group(1) in object_by_ref:
+                return object_by_ref[m.group(1)]
 
-        if "후보" not in text:
+        if "후보" not in text and "항목" not in text:
             continue
         codes = re.findall(r"WM-\d+", text)
         if len(codes) < 2:
             continue
-        if not ("순서대로" in text or "순서였" in text or "순서" in text):
-            continue
         idx: int | None = None
-        # The *confirmed* candidate is the one phrased as "<ordinal> 후보/항목만"
-        # (only the Nth one), as opposed to the held-back ones phrased with
-        # "후보는 보류" -- so anchor on that "만" suffix, not on whichever
-        # ordinal word happens to appear first in the sentence.
+        # The *confirmed* candidate is singled out either by "<ordinal>
+        # 후보/항목만" (only the Nth one) or "후보/항목은 <ordinal>번째다"
+        # (the item IS the Nth) -- as opposed to held-back ones phrased with
+        # "후보는 보류", so anchor on those specific attachments rather than
+        # whichever ordinal word happens to appear first in the sentence.
         m2 = re.search(r"(첫|두|세|네)\s*번째\s*(?:후보|항목)\s*만", text)
         if m2:
             idx = _ORDINAL_INDEX.get(m2.group(1))
-        elif re.search(r"가운데\s*(?:후보|항목)\s*만", text):
-            idx = len(codes) // 2
-        elif re.search(r"마지막\s*(?:후보|항목)\s*만", text):
-            idx = -1
+        if idx is None:
+            m3 = re.search(r"(?:후보|항목)\s*(?:은|는)\s*(첫|두|세|네)\s*번째", text)
+            if m3:
+                idx = _ORDINAL_INDEX.get(m3.group(1))
+        if idx is None:
+            m4 = re.search(r"(첫|둘|셋|넷)째\s*(?:항목|후보)\s*만?\s*(?:선택|확정|남았)", text)
+            if m4:
+                idx = _NATIVE_ORDINAL_INDEX.get(m4.group(1))
+        if idx is None:
+            if re.search(r"가운데\s*(?:후보|항목)\s*만", text):
+                idx = len(codes) // 2
+            elif re.search(r"마지막\s*(?:후보|항목)\s*만", text):
+                idx = -1
         if idx is not None and -len(codes) <= idx < len(codes):
             code = codes[idx]
             if code in object_by_ref:
