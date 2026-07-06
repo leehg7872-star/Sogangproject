@@ -696,6 +696,14 @@ class FinalHarness:
 
         # 2) No exact combination on file: fall back to whichever single
         #    field is independently well-supported on its own.
+        #    A route confirmed earlier in the session being explicitly
+        #    superseded (target_changed_after_turn) is confirmed to mean
+        #    "ask" regardless of the other fields -- 5/5 dev occurrences
+        #    agree, including the one whose value is the descriptive
+        #    "prior_success_route_superseded" sentinel rather than a real
+        #    target name.
+        if "target_changed_after_turn" in rm:
+            return "ask"
         #    dispatch_authority_check == user_binding_pending is confirmed to
         #    mean "hold" regardless of the other fields.
         if dispatch == "user_binding_pending":
@@ -717,6 +725,8 @@ class FinalHarness:
             return "ask"
         if "memory_conflict" in rm:
             return "ask"
+        if "enterprise_policy_recall" in rm:
+            return "amend"
 
         # No structured route/ambiguity/policy signal fired at all: fall
         # back to the session's overall share posture as the deciding factor.
