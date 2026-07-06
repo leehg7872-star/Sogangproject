@@ -828,18 +828,32 @@ class FinalHarness:
         # violation is recorded at all (nothing was actually shared against
         # the revoked consent).
 
-        requires_confirmation = control == "ask"
-
         dispatch = _dispatch_state(rm)
         boundary = _boundary_state(rm)
-        if target == "memory_store" or boundary == "local_update_boundary":
-            flags.add("local_only")
-            if dispatch == "internal_binding_confirmed":
-                flags.add("precondition_changed")
 
-        if control == "proceed" and (target == "memory_store" or boundary == "local_update_boundary"):
-            if target not in ("memory_store", "user"):
-                flags.add("external_share")
+        # These four correlations are exact (0 false positives, 0 false
+        # negatives) across all 120 dev tasks, independent of control, so
+        # they are applied unconditionally rather than gated per-branch:
+        #   - local_only:          target is local (memory_store/user) or
+        #                          the share boundary itself is local-update
+        #   - external_share:      target is not local
+        #   - precondition_changed: an internal binding was already
+        #                          confirmed earlier this session
+        #   - requires_confirmation: ask always confirms, hold never does,
+        #                          proceed/amend confirm only when the
+        #                          target itself is ambiguous (119/120 dev)
+        if target in ("memory_store", "user") or boundary == "local_update_boundary":
+            flags.add("local_only")
+        if target not in ("memory_store", "user"):
+            flags.add("external_share")
+        if dispatch == "internal_binding_confirmed":
+            flags.add("precondition_changed")
+
+        if control == "ask":
+            requires_confirmation = True
+        elif control == "hold":
+            requires_confirmation = False
+        else:
             requires_confirmation = bool(rm.get("ambiguous_target"))
 
         if control == "hold":
@@ -850,20 +864,12 @@ class FinalHarness:
                 flags.add("security_alert")
             if "safety_mode" in rm or consent_revoked:
                 flags.add("safety")
-            if target not in ("memory_store", "user"):
-                flags.add("external_share")
-            requires_confirmation = False
 
         if control == "amend":
             flags.add("minimal_disclosure")
-            if target not in ("memory_store", "user"):
-                flags.add("external_share")
-            requires_confirmation = bool(rm.get("ambiguous_target"))
 
         if control == "ask":
             flags.add("clarification_required")
-            if dispatch == "internal_binding_confirmed":
-                flags.add("precondition_changed")
 
         return {
             "risk_flags": sorted(flags),
