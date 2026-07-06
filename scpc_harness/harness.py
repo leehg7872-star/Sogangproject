@@ -11,6 +11,7 @@ Usage:
 from __future__ import annotations
 
 import csv
+import dataclasses
 import json
 import re
 import sys
@@ -470,6 +471,66 @@ def _boundary_state(rm: dict[str, Any]) -> str | None:
     return value if value in _KNOWN_BOUNDARY else _BOUNDARY_UNKNOWN_DEFAULT
 
 
+# --------------------------------------------------------------------------
+# Route-resolution control table.
+#
+# (dispatch_authority_check, share_boundary_update, ambiguous_target,
+# ambiguous_focal) jointly describe how settled a dispatch route is once any
+# live corrective clause has already been ruled out (classify_task_override
+# returned GENERIC). Each entry below was derived by a controlled comparison
+# within that GENERIC subset of dev: holding all four fields fixed, does the
+# reference control agree across independently-drawn tasks (different
+# task_id, focal object, and domain)?
+#
+#   tier="matched"  - >=2 independent dev tasks agree with no exception found
+#   tier="single"   - exactly 1 dev task observed; not yet replicated
+#
+# No cell here was accepted while a same-key contradiction existed anywhere
+# in the GENERIC subset; there were none. Cells absent from this table (no
+# GENERIC dev task ever exhibited that exact combination) fall through to
+# the coarser, single-field defaults below the table instead of guessing a
+# combination-specific answer with zero support.
+@dataclasses.dataclass(frozen=True)
+class _ControlRule:
+    control: str
+    tier: str
+    evidence: str
+
+
+_CONTROL_TABLE: dict[tuple[str, str, str | None, bool], _ControlRule] = {
+    ("authority_incomplete", "dispatch_blocked_until_binding", "approved_channel_or_visible_recipient", False):
+        _ControlRule("hold", "matched", "dev 208d83525bfe + 503d60ca6a8b (both guardrail_ladder_signal present)"),
+    ("authority_incomplete", "dispatch_blocked_until_binding", None, True):
+        _ControlRule("ask", "matched", "dev x4: 1d36a1e14d07, 681d2e291ea5, e62ca24413a8, 0ad44d955594"),
+    ("internal_binding_confirmed", "local_update_boundary", "surface_recipient_and_resolved_target_both_recent", False):
+        _ControlRule("amend", "matched", "dev 25d2f58cdc0b + 8b4bcd0d1a7d"),
+    ("internal_binding_confirmed", "local_update_boundary", "stored_channel_or_visible_recipient", False):
+        _ControlRule("amend", "matched", "dev a7f2a443f654 + 7efad6a5e982"),
+    ("internal_binding_confirmed", "local_update_boundary", None, True):
+        _ControlRule("proceed", "matched", "dev b0696e0a0b55 + d2a3fd50f334"),
+    ("internal_binding_confirmed", "local_update_boundary", "approved_channel_or_visible_recipient", False):
+        _ControlRule("ask", "single", "dev 0a50781a4b36 (guardrail_ladder_signal present; unreplicated)"),
+    ("internal_binding_confirmed", "redacted_external_boundary", "approved_channel_or_visible_recipient", False):
+        _ControlRule("proceed", "matched", "dev 2b6c7dc70c0b + 1d6606209a76"),
+    ("internal_binding_confirmed", "redacted_external_boundary", None, True):
+        _ControlRule("amend", "matched", "dev 8003c2e5b525 + 20a0410a686c"),
+    ("internal_binding_confirmed", "redacted_external_boundary", "stored_channel_or_visible_recipient", False):
+        _ControlRule("ask", "single", "dev 511b1dc0b84d (unreplicated)"),
+    ("internal_binding_confirmed", "redacted_external_boundary", "surface_recipient_and_resolved_target_both_recent", False):
+        _ControlRule("ask", "single", "dev a976a641dd5a (unreplicated)"),
+    ("user_binding_pending", "dispatch_blocked_until_binding", "approved_channel_or_visible_recipient", False):
+        _ControlRule("hold", "single", "dev 022985565adb (unreplicated, but dispatch==user_binding_pending alone is separately confirmed to always hold)"),
+    ("user_binding_pending", "dispatch_blocked_until_binding", None, True):
+        _ControlRule("hold", "single", "dev 0ab2e0715082 (unreplicated, same note as above)"),
+}
+
+
+def _lookup_control_table(dispatch: str | None, boundary: str | None, ambiguous_target: str | None, ambiguous_focal: bool) -> _ControlRule | None:
+    if dispatch is None or boundary is None:
+        return None
+    return _CONTROL_TABLE.get((dispatch, boundary, ambiguous_target, ambiguous_focal))
+
+
 def decide_control(task: dict[str, Any], focal: dict[str, Any], target: str, evidence: dict[str, Any], override: str) -> str:
     rm = record_map(records_of(task))
 
@@ -494,40 +555,25 @@ def decide_control(task: dict[str, Any], focal: dict[str, Any], target: str, evi
 
     dispatch = _dispatch_state(rm)
     boundary = _boundary_state(rm)
-    guardrail = bool(rm.get("guardrail_ladder_signal"))
     external_policy = rm.get("external_share_policy")
     ambiguous_target = rm.get("ambiguous_target")
     ambiguous_focal = bool(rm.get("ambiguous_focal"))
 
-    # Route-resolution family: dispatch_authority_check / share_boundary_update
-    # / ambiguous_target jointly describe how settled the dispatch route is.
-    # The mapping below reflects how those record values co-occur with the
-    # reference control decision across the sample task pool.
+    # 1) Exact, controlled-comparison-backed combination -> use it verbatim,
+    #    whether it's "matched" (replicated) or "single" (observed once).
+    rule = _lookup_control_table(dispatch, boundary, ambiguous_target, ambiguous_focal)
+    if rule is not None:
+        return rule.control
+
+    # 2) No exact combination on file: fall back to whichever single field is
+    #    independently well-supported on its own, from least to most permissive.
+    #    dispatch_authority_check == user_binding_pending is confirmed to mean
+    #    "hold" regardless of the other fields (every dev occurrence agrees,
+    #    inside and outside the GENERIC subset).
     if dispatch == "user_binding_pending":
         return "hold"
-
     if dispatch == "authority_incomplete":
-        if ambiguous_target == "approved_channel_or_visible_recipient" and guardrail:
-            return "hold"
         return "ask"
-
-    if dispatch == "internal_binding_confirmed":
-        if boundary == "local_update_boundary":
-            if ambiguous_target in ("surface_recipient_and_resolved_target_both_recent", "stored_channel_or_visible_recipient"):
-                return "amend"
-            if ambiguous_target == "approved_channel_or_visible_recipient":
-                return "ask" if guardrail else "proceed"
-            return "proceed"
-        if boundary == "redacted_external_boundary":
-            if ambiguous_target == "approved_channel_or_visible_recipient":
-                return "proceed"
-            if ambiguous_target in ("surface_recipient_and_resolved_target_both_recent", "stored_channel_or_visible_recipient"):
-                return "ask"
-            if ambiguous_focal:
-                return "amend"
-            return "amend"
-        return "proceed"
-
     if boundary == "dispatch_blocked_until_binding":
         return "ask"
 
@@ -542,8 +588,8 @@ def decide_control(task: dict[str, Any], focal: dict[str, Any], target: str, evi
     if ambiguous_target or ambiguous_focal:
         return "ask"
 
-    # No structured route/ambiguity/policy signal fired: fall back to the
-    # session's overall share posture as the deciding factor.
+    # No structured route/ambiguity/policy signal fired at all: fall back to
+    # the session's overall share posture as the deciding factor.
     if rm.get("session_share_policy") == "strict":
         return "amend"
     return "proceed"
