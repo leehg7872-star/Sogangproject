@@ -765,7 +765,7 @@ class FinalHarness:
 
     def build_policy(self, task: dict[str, Any], focal: dict[str, Any], target: str, control: str, evidence: dict[str, Any]) -> dict[str, Any]:
         rm = record_map(records_of(task))
-        flags: set[str] = set(evidence.get("risk_flags", []))
+        flags: set[str] = set()
         violations: set[str] = set()
 
         if rm.get("session_share_policy") == "strict":
@@ -790,10 +790,12 @@ class FinalHarness:
 
         dispatch = _dispatch_state(rm)
         boundary = _boundary_state(rm)
-        if control == "proceed" and (target == "memory_store" or boundary == "local_update_boundary"):
+        if target == "memory_store" or boundary == "local_update_boundary":
             flags.add("local_only")
             if dispatch == "internal_binding_confirmed":
                 flags.add("precondition_changed")
+
+        if control == "proceed" and (target == "memory_store" or boundary == "local_update_boundary"):
             if target not in ("memory_store", "user"):
                 flags.add("external_share")
             requires_confirmation = bool(rm.get("ambiguous_target"))
