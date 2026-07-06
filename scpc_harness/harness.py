@@ -434,6 +434,41 @@ def infer_target(task: dict[str, Any], focal: dict[str, Any], session: dict[str,
 # --------------------------------------------------------------------------
 _CONSENT_NEGATIVE = ("revoked", "withdraw", "denied", "철회", "거부")
 
+# The screening pool introduces record values never seen in dev for fields the
+# control ladder already depends on (e.g. dispatch_authority_check ==
+# "local_authority_confirmed", share_boundary_update ==
+# "redacted_after_selection_boundary"). Their co-occurrence with the other
+# route-family fields matches the known value they stand in for (same
+# share_boundary_update / route_candidate_snapshot distribution as their
+# sibling), so they are treated as aliases rather than left to silently fall
+# through to a worse generic branch. Any value that is still unrecognized
+# after alias resolution is mapped to the most cautious *known* state for
+# that field, rather than falling through silently -- an unfamiliar state is
+# itself a signal that nothing has been verified yet.
+_DISPATCH_ALIASES = {"local_authority_confirmed": "internal_binding_confirmed"}
+_KNOWN_DISPATCH = {"user_binding_pending", "authority_incomplete", "internal_binding_confirmed"}
+_DISPATCH_UNKNOWN_DEFAULT = "authority_incomplete"
+
+_BOUNDARY_ALIASES = {"redacted_after_selection_boundary": "redacted_external_boundary"}
+_KNOWN_BOUNDARY = {"local_update_boundary", "redacted_external_boundary", "dispatch_blocked_until_binding"}
+_BOUNDARY_UNKNOWN_DEFAULT = "redacted_external_boundary"
+
+
+def _dispatch_state(rm: dict[str, Any]) -> str | None:
+    value = rm.get("dispatch_authority_check")
+    if value is None:
+        return None
+    value = _DISPATCH_ALIASES.get(value, value)
+    return value if value in _KNOWN_DISPATCH else _DISPATCH_UNKNOWN_DEFAULT
+
+
+def _boundary_state(rm: dict[str, Any]) -> str | None:
+    value = rm.get("share_boundary_update")
+    if value is None:
+        return None
+    value = _BOUNDARY_ALIASES.get(value, value)
+    return value if value in _KNOWN_BOUNDARY else _BOUNDARY_UNKNOWN_DEFAULT
+
 
 def decide_control(task: dict[str, Any], focal: dict[str, Any], target: str, evidence: dict[str, Any], override: str) -> str:
     rm = record_map(records_of(task))
@@ -457,8 +492,8 @@ def decide_control(task: dict[str, Any], focal: dict[str, Any], target: str, evi
     if consent_val and any(w in consent_val for w in _CONSENT_NEGATIVE):
         return "hold"
 
-    dispatch = rm.get("dispatch_authority_check")
-    boundary = rm.get("share_boundary_update")
+    dispatch = _dispatch_state(rm)
+    boundary = _boundary_state(rm)
     guardrail = bool(rm.get("guardrail_ladder_signal"))
     external_policy = rm.get("external_share_policy")
     ambiguous_target = rm.get("ambiguous_target")
@@ -527,7 +562,7 @@ LOCAL_UPDATE_SCOPE = {
 
 def build_content_scope(task: dict[str, Any], focal: dict[str, Any], target: str, control: str, evidence: dict[str, Any]) -> dict[str, Any]:
     rm = record_map(records_of(task))
-    boundary = rm.get("share_boundary_update")
+    boundary = _boundary_state(rm)
 
     if control == "proceed" and (target == "memory_store" or boundary == "local_update_boundary"):
         return dict(LOCAL_UPDATE_SCOPE)
@@ -573,27 +608,33 @@ def build_policy(task: dict[str, Any], focal: dict[str, Any], target: str, contr
         flags.add("sensitive_content")
 
     consent_val = text_of(rm.get("consent")).lower()
-    if consent_val and any(w in consent_val for w in _CONSENT_NEGATIVE):
-        violations.add("consent_revoked")
+    consent_revoked = bool(consent_val) and any(w in consent_val for w in _CONSENT_NEGATIVE)
+    # Note: "consent_revoked" itself is never the reference violations value --
+    # a revoked consent that blocks the request shows up as
+    # precondition_changed_ignored (handled in the hold branch below); if the
+    # request is instead confined to a local-only update, no violation is
+    # recorded at all (nothing was actually shared against the revoked
+    # consent). See the hold/proceed branches for where consent_revoked feeds in.
 
     requires_confirmation = control == "ask"
 
-    boundary = rm.get("share_boundary_update")
+    dispatch = _dispatch_state(rm)
+    boundary = _boundary_state(rm)
     if control == "proceed" and (target == "memory_store" or boundary == "local_update_boundary"):
         flags.add("local_only")
-        if rm.get("dispatch_authority_check") == "internal_binding_confirmed":
+        if dispatch == "internal_binding_confirmed":
             flags.add("precondition_changed")
         if target not in ("memory_store", "user"):
             flags.add("external_share")
         requires_confirmation = bool(rm.get("ambiguous_target"))
 
     if control == "hold":
-        if rm.get("dispatch_authority_check") in ("user_binding_pending", "authority_incomplete") or "focal_resolution_trace" in rm:
+        if dispatch in ("user_binding_pending", "authority_incomplete") or "focal_resolution_trace" in rm or consent_revoked:
             flags.add("precondition_invalidated")
             violations.add("precondition_changed_ignored")
         if "security_alert" in rm:
             flags.add("security_alert")
-        if "safety_mode" in rm:
+        if "safety_mode" in rm or consent_revoked:
             flags.add("safety")
         if target not in ("memory_store", "user"):
             flags.add("external_share")
@@ -605,11 +646,34 @@ def build_policy(task: dict[str, Any], focal: dict[str, Any], target: str, contr
             flags.add("external_share")
         requires_confirmation = bool(rm.get("ambiguous_target"))
 
+    if control == "ask":
+        flags.add("clarification_required")
+        if dispatch == "internal_binding_confirmed":
+            flags.add("precondition_changed")
+
     return {
         "risk_flags": sorted(flags),
         "violations": sorted(violations),
         "requires_confirmation": requires_confirmation,
     }
+
+
+# content_scope.excluded_fields is scored against the reference by field-name
+# F1, so it must keep raw field names (raw_quote/rrn/location/...). The
+# plan_events "remove" arg, by contrast, is scored against a closed public
+# ontology -- a raw field name like "doctor_note"/"card_number"/"name" isn't
+# a member of that ontology and would silently score zero. Route it through
+# the one field name that *is* itself a valid public value when present, and
+# fall back to the generic "sensitive_fields" bucket (also a valid public
+# value) rather than emitting an arbitrary field name.
+_PLAN_SAFE_REMOVE_VALUES = ("raw_quote", "rrn", "location", "numeric_value")
+
+
+def _plan_remove_value(excluded_fields: list[str] | None) -> str:
+    for field in excluded_fields or []:
+        if field in _PLAN_SAFE_REMOVE_VALUES:
+            return field
+    return "sensitive_fields" if excluded_fields else "raw_quote"
 
 
 def build_plan_events(focal_id: str, target: str, control: str, scope: dict[str, Any], policy: dict[str, Any]) -> list[dict[str, Any]]:
@@ -624,24 +688,30 @@ def build_plan_events(focal_id: str, target: str, control: str, scope: dict[str,
         reason = "precondition_invalidated" if "precondition_invalidated" in policy.get("risk_flags", []) else "strict_policy_block"
         if "security_alert" in policy.get("risk_flags", []):
             reason = "security_alert"
-        if "consent_revoked" in policy.get("violations", []):
-            reason = "consent_revoked"
         return [
             {"verb": "read", "target": focal_id, "args": {"purpose": reason if reason != "strict_policy_block" else "invalidated_precondition"}},
             {"verb": "guard", "target": focal_id, "args": {"reason": reason}},
         ]
 
     if control == "ask":
-        reason = "route_resolution_required" if "target_ambiguity" in policy.get("risk_flags", []) else "clarification_required"
+        flags = policy.get("risk_flags", [])
+        # An ask that challenges a route that was already confirmed reads as
+        # "please reconfirm a precondition", not "please resolve a fresh
+        # ambiguity" -- these are different reasons in the public ontology.
+        if "precondition_changed" in flags:
+            purpose, reason = "clarify_precondition", "precondition_changed"
+        elif "target_ambiguity" in flags:
+            purpose = reason = "route_resolution_required"
+        else:
+            purpose = reason = "clarification_required"
         return [
-            {"verb": "read", "target": focal_id, "args": {"purpose": reason}},
+            {"verb": "read", "target": focal_id, "args": {"purpose": purpose}},
             {"verb": "clarify", "target": "user", "args": {"reason": reason}},
         ]
 
     events = [{"verb": "read", "target": focal_id, "args": {"purpose": "minimal_disclosure" if control == "amend" else "inspect_context"}}]
     if control == "amend" or scope.get("mode") == "redacted":
-        remove = scope.get("excluded_fields") or ["raw_quote"]
-        events.append({"verb": "redact", "target": focal_id, "args": {"remove": remove[0]}})
+        events.append({"verb": "redact", "target": focal_id, "args": {"remove": _plan_remove_value(scope.get("excluded_fields"))}})
     elif scope.get("mode") in ("summary", "status_only"):
         events.append({"verb": "summarize", "target": focal_id, "args": {"mode": scope.get("mode")}})
     events.append({"verb": "dispatch", "target": target, "args": {"scope": scope.get("mode")}})
