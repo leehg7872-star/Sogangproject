@@ -1,7 +1,12 @@
 """SCPC 2026 Final harness.
 
-Implements FinalHarness.answer_task(task, session) per the contest's fixed
-interface (see data/TERMS_GUIDE.md and data/submission_schema.json).
+Structured to match the contest's official baseline notebook
+(SCPC2026_Final_baseline.ipynb) section-for-section: FixedSLMClient facade,
+small task-reading helpers, then FinalHarness with the six recommended
+judgment methods (choose_focal / infer_target / decide_control /
+build_content_scope / build_policy / build_plan_events) plus
+update_session_memory and user_response as bound methods -- the same shape
+as the notebook's own skeleton, with the judgment logic replaced.
 
 Usage:
     python harness.py dev                 # run against dev_tasks.jsonl and score
@@ -15,17 +20,29 @@ import dataclasses
 import json
 import re
 import sys
+import zipfile
 from pathlib import Path
 from typing import Any
 
 SUBMISSION_SCHEMA = "scpc.final.answer.v1"
 FIXED_SLM_ID = "scpc-final-fixed-slm-local-facade"
 ROOT = Path(__file__).resolve().parent
-DATA_DIR = ROOT / "data"
+
+if (ROOT / "SCPC2026_Final_data.zip").is_file() and not (ROOT / "data").is_dir():
+    with zipfile.ZipFile(ROOT / "SCPC2026_Final_data.zip") as zf:
+        zf.extractall(ROOT)
+
+_DATA_CANDIDATES = [
+    ROOT / "participant" / "data",
+    ROOT / "data",
+    ROOT,
+    ROOT.parent / "participant" / "data",
+]
+DATA_DIR = next((p for p in _DATA_CANDIDATES if (p / "screening_tasks.jsonl").is_file()), ROOT / "data")
 
 
 # --------------------------------------------------------------------------
-# Fixed SLM facade (provided interface; kept as a deterministic local facade,
+# Fixed SLM facade (provided interface, unmodified from the baseline notebook;
 # used only as a supplementary evidence source per contest rules).
 # --------------------------------------------------------------------------
 class FixedSLMClient:
@@ -74,7 +91,7 @@ class FixedSLMClient:
 
 
 # --------------------------------------------------------------------------
-# Small task-reading helpers
+# Small task-reading helpers (same names/signatures as the baseline notebook)
 # --------------------------------------------------------------------------
 def records_of(task: dict[str, Any]) -> list[dict[str, Any]]:
     return list(((task.get("device_state") or {}).get("records") or []))
@@ -127,7 +144,6 @@ def sensitive_fields_of(obj: dict[str, Any]) -> set[str]:
 # generalize across paraphrased wording.
 # --------------------------------------------------------------------------
 _HOLD_CONCEPT = ("허용", "근거", "전제", "승인", "consent")
-_HOLD_BROKEN = ("무너", "깨", "사라", "취소", "무효화", "믿을 수 없", "뒤집")
 _HOLD_STOP = (
     "안 된다", "위험", "보류", "멈춘다", "멈춰야", "막아야", "막는다", "차단", "금지",
     "실행하면 안", "처리하지 않는다",
@@ -218,7 +234,7 @@ def classify_task_override(task: dict[str, Any]) -> str:
 
 
 # --------------------------------------------------------------------------
-# Focal resolution
+# Focal resolution helpers
 # --------------------------------------------------------------------------
 def _object_by_ref(objects: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     out: dict[str, dict[str, Any]] = {}
@@ -264,12 +280,7 @@ def _resolve_focal_via_marker_chain(rm: dict[str, Any], object_by_ref: dict[str,
     return object_by_ref.get(str(ref_code))
 
 
-_ORDINAL_INDEX = {
-    "첫": 0,
-    "두": 1,
-    "세": 2,
-    "네": 3,
-}
+_ORDINAL_INDEX = {"첫": 0, "두": 1, "세": 2, "네": 3}
 
 
 def _resolve_focal_via_history_text(task: dict[str, Any], object_by_ref: dict[str, dict[str, Any]]) -> dict[str, Any] | None:
@@ -310,52 +321,8 @@ def _resolve_focal_via_history_text(task: dict[str, Any], object_by_ref: dict[st
     return None
 
 
-def choose_focal(task: dict[str, Any], session: dict[str, Any], evidence: dict[str, Any]) -> dict[str, Any]:
-    objects = objects_of(task)
-    if not objects:
-        return {}
-    rm = record_map(records_of(task))
-    object_by_ref = _object_by_ref(objects)
-
-    via_marker = _resolve_focal_via_marker_chain(rm, object_by_ref)
-    if via_marker is not None:
-        return via_marker
-
-    via_history = _resolve_focal_via_history_text(task, object_by_ref)
-    if via_history is not None:
-        return via_history
-
-    # Direct id references inside record values.
-    object_by_id = {str(o.get("id")): o for o in objects}
-    for record in reversed(records_of(task)):
-        value = record.get("value")
-        candidates: list[str] = []
-        if isinstance(value, str):
-            candidates.append(value)
-        elif isinstance(value, dict):
-            candidates.extend(str(v) for v in value.values() if isinstance(v, str))
-        for candidate in candidates:
-            if candidate in object_by_id:
-                return object_by_id[candidate]
-
-    history_text = full_task_text(task).lower()
-    for obj in objects:
-        ref_code = str((obj.get("attrs") or {}).get("ref_code") or "").lower()
-        if ref_code and ref_code in history_text:
-            return obj
-
-    prompt_tokens = {tok for tok in re.findall(r"[A-Za-z0-9가-힣_]+", str(task.get("prompt", "")).lower()) if len(tok) >= 2}
-    best = objects[0]
-    best_score = -1
-    for obj in objects:
-        score = sum(1 for tok in prompt_tokens if tok in object_text(obj))
-        if score > best_score:
-            best, best_score = obj, score
-    return best
-
-
 # --------------------------------------------------------------------------
-# Target inference
+# Target inference helpers
 # --------------------------------------------------------------------------
 def _resolved_target_value(rm: dict[str, Any]) -> str | None:
     resolved = rm.get("resolved_target")
@@ -400,38 +367,8 @@ def _target_from_memory_recall(task: dict[str, Any], rm: dict[str, Any], memory:
     return None
 
 
-def infer_target(task: dict[str, Any], focal: dict[str, Any], session: dict[str, Any], override: str, memory: dict[str, Any]) -> str:
-    if override == "LOCAL_ONLY":
-        return "memory_store"
-    if override in ("ASK", "HOLD"):
-        return "user"
-
-    rm = record_map(records_of(task))
-    if "persistent_memory_write" in rm:
-        return "memory_store"
-
-    # A route confirmed in an earlier turn can be explicitly superseded.
-    changed = rm.get("target_changed_after_turn")
-    if isinstance(changed, str) and changed and changed not in ("prior_success_route_superseded",):
-        return changed
-
-    resolved = _resolved_target_value(rm)
-    if resolved:
-        return resolved
-
-    from_memory = _target_from_memory_recall(task, rm, memory)
-    if from_memory:
-        return from_memory
-
-    attrs = focal.get("attrs") or {}
-    for key in ("recipient", "target", "channel", "app", "merchant", "name"):
-        if attrs.get(key):
-            return str(attrs[key])
-    return str(session.get("last_target") or "user")
-
-
 # --------------------------------------------------------------------------
-# Control decision
+# Control decision helpers
 # --------------------------------------------------------------------------
 _CONSENT_NEGATIVE = ("revoked", "withdraw", "denied", "철회", "거부")
 
@@ -471,7 +408,6 @@ def _boundary_state(rm: dict[str, Any]) -> str | None:
     return value if value in _KNOWN_BOUNDARY else _BOUNDARY_UNKNOWN_DEFAULT
 
 
-# --------------------------------------------------------------------------
 # Route-resolution control table.
 #
 # (dispatch_authority_check, share_boundary_update, ambiguous_target,
@@ -488,7 +424,7 @@ def _boundary_state(rm: dict[str, Any]) -> str | None:
 # No cell here was accepted while a same-key contradiction existed anywhere
 # in the GENERIC subset; there were none. Cells absent from this table (no
 # GENERIC dev task ever exhibited that exact combination) fall through to
-# the coarser, single-field defaults below the table instead of guessing a
+# the coarser, single-field defaults in decide_control instead of guessing a
 # combination-specific answer with zero support.
 @dataclasses.dataclass(frozen=True)
 class _ControlRule:
@@ -531,72 +467,8 @@ def _lookup_control_table(dispatch: str | None, boundary: str | None, ambiguous_
     return _CONTROL_TABLE.get((dispatch, boundary, ambiguous_target, ambiguous_focal))
 
 
-def decide_control(task: dict[str, Any], focal: dict[str, Any], target: str, evidence: dict[str, Any], override: str) -> str:
-    rm = record_map(records_of(task))
-
-    if override == "LOCAL_ONLY":
-        return "proceed"
-    if override == "ASK":
-        return "ask"
-    if override == "HOLD":
-        return "hold"
-    if override == "AMEND":
-        return "amend"
-
-    if "persistent_memory_write" in rm:
-        return "proceed"
-
-    # Hard safety stops.
-    if "security_alert" in rm or "safety_mode" in rm or "privacy_guard" in rm:
-        return "hold"
-    consent_val = text_of(rm.get("consent")).lower()
-    if consent_val and any(w in consent_val for w in _CONSENT_NEGATIVE):
-        return "hold"
-
-    dispatch = _dispatch_state(rm)
-    boundary = _boundary_state(rm)
-    external_policy = rm.get("external_share_policy")
-    ambiguous_target = rm.get("ambiguous_target")
-    ambiguous_focal = bool(rm.get("ambiguous_focal"))
-
-    # 1) Exact, controlled-comparison-backed combination -> use it verbatim,
-    #    whether it's "matched" (replicated) or "single" (observed once).
-    rule = _lookup_control_table(dispatch, boundary, ambiguous_target, ambiguous_focal)
-    if rule is not None:
-        return rule.control
-
-    # 2) No exact combination on file: fall back to whichever single field is
-    #    independently well-supported on its own, from least to most permissive.
-    #    dispatch_authority_check == user_binding_pending is confirmed to mean
-    #    "hold" regardless of the other fields (every dev occurrence agrees,
-    #    inside and outside the GENERIC subset).
-    if dispatch == "user_binding_pending":
-        return "hold"
-    if dispatch == "authority_incomplete":
-        return "ask"
-    if boundary == "dispatch_blocked_until_binding":
-        return "ask"
-
-    if external_policy in ("raw_quote_forbidden", "raw_sensitive_forbidden", "summary_only_allowed"):
-        return "amend"
-    if external_policy == "doctor_note_forbidden":
-        return "hold"
-    if boundary == "redacted_external_boundary":
-        return "amend"
-    if evidence.get("requires_redaction"):
-        return "amend"
-    if ambiguous_target or ambiguous_focal:
-        return "ask"
-
-    # No structured route/ambiguity/policy signal fired at all: fall back to
-    # the session's overall share posture as the deciding factor.
-    if rm.get("session_share_policy") == "strict":
-        return "amend"
-    return "proceed"
-
-
 # --------------------------------------------------------------------------
-# content_scope / policy / plan_events / user_response
+# content_scope / plan_events helpers
 # --------------------------------------------------------------------------
 LOCAL_UPDATE_SCOPE = {
     "mode": "status_only",
@@ -604,105 +476,6 @@ LOCAL_UPDATE_SCOPE = {
     "excluded_fields": ["raw_quote", "location", "numeric_value"],
     "requires_user_confirmation": False,
 }
-
-
-def build_content_scope(task: dict[str, Any], focal: dict[str, Any], target: str, control: str, evidence: dict[str, Any]) -> dict[str, Any]:
-    rm = record_map(records_of(task))
-    boundary = _boundary_state(rm)
-
-    if control == "proceed" and (target == "memory_store" or boundary == "local_update_boundary"):
-        return dict(LOCAL_UPDATE_SCOPE)
-
-    sensitive = sensitive_fields_of(focal)
-
-    if control == "hold":
-        return {"mode": "none", "allowed_fields": [], "excluded_fields": [], "requires_user_confirmation": False}
-
-    if control == "ask":
-        excluded = sorted(sensitive) if sensitive else ["raw_quote"]
-        return {"mode": "summary", "allowed_fields": ["status"], "excluded_fields": excluded, "requires_user_confirmation": True}
-
-    if control == "amend":
-        excluded = sorted(sensitive) if sensitive else ["raw_quote"]
-        needs_confirm = bool(rm.get("ambiguous_target"))
-        return {"mode": "redacted", "allowed_fields": ["summary"], "excluded_fields": excluded, "requires_user_confirmation": needs_confirm}
-
-    # proceed to an external target already confirmed as an approved,
-    # trusted channel: nothing needs to be withheld.
-    if rm.get("ambiguous_target") == "approved_channel_or_visible_recipient" and boundary == "redacted_external_boundary":
-        return {"mode": "raw", "allowed_fields": ["summary", "title"], "excluded_fields": [], "requires_user_confirmation": False}
-
-    excluded = sorted(sensitive) if sensitive else ["raw_quote"]
-    return {"mode": "summary", "allowed_fields": ["summary", "title", "status"], "excluded_fields": excluded, "requires_user_confirmation": False}
-
-
-def build_policy(task: dict[str, Any], focal: dict[str, Any], target: str, control: str, evidence: dict[str, Any]) -> dict[str, Any]:
-    rm = record_map(records_of(task))
-    flags: set[str] = set(evidence.get("risk_flags", []))
-    violations: set[str] = set()
-
-    session_policy = rm.get("session_share_policy")
-    if session_policy == "strict":
-        flags.add("strict_share_policy")
-
-    if rm.get("ambiguous_target"):
-        flags.add("target_ambiguity")
-    if rm.get("ambiguous_focal"):
-        flags.add("ambiguous_focal")
-
-    if sensitive_fields_of(focal):
-        flags.add("sensitive_content")
-
-    consent_val = text_of(rm.get("consent")).lower()
-    consent_revoked = bool(consent_val) and any(w in consent_val for w in _CONSENT_NEGATIVE)
-    # Note: "consent_revoked" itself is never the reference violations value --
-    # a revoked consent that blocks the request shows up as
-    # precondition_changed_ignored (handled in the hold branch below); if the
-    # request is instead confined to a local-only update, no violation is
-    # recorded at all (nothing was actually shared against the revoked
-    # consent). See the hold/proceed branches for where consent_revoked feeds in.
-
-    requires_confirmation = control == "ask"
-
-    dispatch = _dispatch_state(rm)
-    boundary = _boundary_state(rm)
-    if control == "proceed" and (target == "memory_store" or boundary == "local_update_boundary"):
-        flags.add("local_only")
-        if dispatch == "internal_binding_confirmed":
-            flags.add("precondition_changed")
-        if target not in ("memory_store", "user"):
-            flags.add("external_share")
-        requires_confirmation = bool(rm.get("ambiguous_target"))
-
-    if control == "hold":
-        if dispatch in ("user_binding_pending", "authority_incomplete") or "focal_resolution_trace" in rm or consent_revoked:
-            flags.add("precondition_invalidated")
-            violations.add("precondition_changed_ignored")
-        if "security_alert" in rm:
-            flags.add("security_alert")
-        if "safety_mode" in rm or consent_revoked:
-            flags.add("safety")
-        if target not in ("memory_store", "user"):
-            flags.add("external_share")
-        requires_confirmation = False
-
-    if control == "amend":
-        flags.add("minimal_disclosure")
-        if target not in ("memory_store", "user"):
-            flags.add("external_share")
-        requires_confirmation = bool(rm.get("ambiguous_target"))
-
-    if control == "ask":
-        flags.add("clarification_required")
-        if dispatch == "internal_binding_confirmed":
-            flags.add("precondition_changed")
-
-    return {
-        "risk_flags": sorted(flags),
-        "violations": sorted(violations),
-        "requires_confirmation": requires_confirmation,
-    }
-
 
 # content_scope.excluded_fields is scored against the reference by field-name
 # F1, so it must keep raw field names (raw_quote/rrn/location/...). The
@@ -722,62 +495,12 @@ def _plan_remove_value(excluded_fields: list[str] | None) -> str:
     return "sensitive_fields" if excluded_fields else "raw_quote"
 
 
-def build_plan_events(focal_id: str, target: str, control: str, scope: dict[str, Any], policy: dict[str, Any]) -> list[dict[str, Any]]:
-    if target == "memory_store" and control == "proceed":
-        return [
-            {"verb": "read", "target": focal_id, "args": {"purpose": "local_update"}},
-            {"verb": "verify", "target": "share_boundary_update", "args": {"scope": "local_update"}},
-            {"verb": "update", "target": focal_id, "args": {"state": "local_status_only"}},
-        ]
-
-    if control == "hold":
-        reason = "precondition_invalidated" if "precondition_invalidated" in policy.get("risk_flags", []) else "strict_policy_block"
-        if "security_alert" in policy.get("risk_flags", []):
-            reason = "security_alert"
-        return [
-            {"verb": "read", "target": focal_id, "args": {"purpose": reason if reason != "strict_policy_block" else "invalidated_precondition"}},
-            {"verb": "guard", "target": focal_id, "args": {"reason": reason}},
-        ]
-
-    if control == "ask":
-        flags = policy.get("risk_flags", [])
-        # An ask that challenges a route that was already confirmed reads as
-        # "please reconfirm a precondition", not "please resolve a fresh
-        # ambiguity" -- these are different reasons in the public ontology.
-        if "precondition_changed" in flags:
-            purpose, reason = "clarify_precondition", "precondition_changed"
-        elif "target_ambiguity" in flags:
-            purpose = reason = "route_resolution_required"
-        else:
-            purpose = reason = "clarification_required"
-        return [
-            {"verb": "read", "target": focal_id, "args": {"purpose": purpose}},
-            {"verb": "clarify", "target": "user", "args": {"reason": reason}},
-        ]
-
-    events = [{"verb": "read", "target": focal_id, "args": {"purpose": "minimal_disclosure" if control == "amend" else "inspect_context"}}]
-    if control == "amend" or scope.get("mode") == "redacted":
-        events.append({"verb": "redact", "target": focal_id, "args": {"remove": _plan_remove_value(scope.get("excluded_fields"))}})
-    elif scope.get("mode") in ("summary", "status_only"):
-        events.append({"verb": "summarize", "target": focal_id, "args": {"mode": scope.get("mode")}})
-    events.append({"verb": "dispatch", "target": target, "args": {"scope": scope.get("mode")}})
-    return events
-
-
-def user_response(control: str, target: str, scope: dict[str, Any], policy: dict[str, Any]) -> str:
-    if control == "hold":
-        return "보안, 동의 또는 정책 조건 때문에 진행하지 않겠습니다."
-    if control == "ask":
-        return "대상이나 허용 범위를 한 번 더 확인해야 합니다."
-    if target == "memory_store":
-        return "외부로 보내지 않고 기기 내부 상태만 갱신하겠습니다."
-    if control == "amend":
-        return f"민감 정보를 제외하고 {target}(으)로 진행하겠습니다."
-    return f"요청한 범위로 {target}(으)로 진행하겠습니다."
-
-
 # --------------------------------------------------------------------------
-# FinalHarness
+# FinalHarness -- same shape as the baseline notebook's skeleton:
+# update_session_memory / choose_focal / infer_target / decide_control /
+# build_content_scope / build_policy / build_plan_events / user_response are
+# all bound methods, calling out to the module-level helpers above for the
+# parts that don't need instance state.
 # --------------------------------------------------------------------------
 class FinalHarness:
     def __init__(self) -> None:
@@ -786,6 +509,34 @@ class FinalHarness:
 
     def prepare(self, tasks: list[dict[str, Any]]) -> None:
         self.memory.clear()
+
+    def answer_task(self, task: dict[str, Any], session: dict[str, Any]) -> dict[str, Any]:
+        evidence = self.slm.summarize_task(task)
+        self.update_session_memory(task, session, evidence)
+
+        focal = self.choose_focal(task, session, evidence)
+        focal_id = str(focal.get("id") or "")
+        target = self.infer_target(task, focal, session, evidence)
+        control = self.decide_control(task, focal, target, evidence)
+        content_scope = self.build_content_scope(task, focal, target, control, evidence)
+        policy = self.build_policy(task, focal, target, control, evidence)
+        plan_events = self.build_plan_events(task, focal_id, target, control, content_scope, policy)
+
+        session["last_focal_id"] = focal_id
+        session["last_target"] = target
+        session["last_control"] = control
+
+        return {
+            "focal_id": focal_id,
+            "target": target,
+            "control": control,
+            "content_scope": content_scope,
+            "policy": policy,
+            "plan_events": plan_events,
+            "user_response": self.user_response(control, target, content_scope, policy),
+            "audit_tags": evidence.get("audit_tags", []),
+            "counterfactual": "최신 기록, 동의 상태, 공유 범위, 보안 신호가 바뀌면 판단이 달라질 수 있습니다.",
+        }
 
     def update_session_memory(self, task: dict[str, Any], session: dict[str, Any], evidence: dict[str, Any]) -> None:
         for record in records_of(task):
@@ -799,38 +550,298 @@ class FinalHarness:
                     self.memory[person] = value
         session["last_evidence"] = evidence
 
-    def answer_task(self, task: dict[str, Any], session: dict[str, Any]) -> dict[str, Any]:
-        evidence = self.slm.summarize_task(task)
-        self.update_session_memory(task, session, evidence)
+    def choose_focal(self, task: dict[str, Any], session: dict[str, Any], evidence: dict[str, Any]) -> dict[str, Any]:
+        objects = objects_of(task)
+        if not objects:
+            return {}
+        rm = record_map(records_of(task))
+        object_by_ref = _object_by_ref(objects)
 
+        # 1) A structured marker chain (focal_marker_refs + focal_resolution_trace)
+        #    is documented as authoritative when present: follow it exactly.
+        via_marker = _resolve_focal_via_marker_chain(rm, object_by_ref)
+        if via_marker is not None:
+            return via_marker
+
+        # 2) Otherwise, visible_history may narrate an ordinal-in-list
+        #    correction ("candidates were A, B, C; only the second is
+        #    confirmed") -- parse that structure rather than the raw digits.
+        via_history = _resolve_focal_via_history_text(task, object_by_ref)
+        if via_history is not None:
+            return via_history
+
+        # 3) A record value directly naming an object id.
+        object_by_id = {str(o.get("id")): o for o in objects}
+        for record in reversed(records_of(task)):
+            value = record.get("value")
+            candidates: list[str] = []
+            if isinstance(value, str):
+                candidates.append(value)
+            elif isinstance(value, dict):
+                candidates.extend(str(v) for v in value.values() if isinstance(v, str))
+            for candidate in candidates:
+                if candidate in object_by_id:
+                    return object_by_id[candidate]
+
+        # 4) A ref_code literally mentioned anywhere in the visible history.
+        history_text = full_task_text(task).lower()
+        for obj in objects:
+            ref_code = str((obj.get("attrs") or {}).get("ref_code") or "").lower()
+            if ref_code and ref_code in history_text:
+                return obj
+
+        # 5) Last resort: token overlap between the prompt and object attrs.
+        prompt_tokens = {tok for tok in re.findall(r"[A-Za-z0-9가-힣_]+", str(task.get("prompt", "")).lower()) if len(tok) >= 2}
+        best = objects[0]
+        best_score = -1
+        for obj in objects:
+            score = sum(1 for tok in prompt_tokens if tok in object_text(obj))
+            if score > best_score:
+                best, best_score = obj, score
+        return best
+
+    def infer_target(self, task: dict[str, Any], focal: dict[str, Any], session: dict[str, Any], evidence: dict[str, Any]) -> str:
         override = classify_task_override(task)
-        focal = choose_focal(task, session, evidence)
-        focal_id = str(focal.get("id") or "")
-        target = infer_target(task, focal, session, override, self.memory)
-        control = decide_control(task, focal, target, evidence, override)
-        content_scope = build_content_scope(task, focal, target, control, evidence)
-        policy = build_policy(task, focal, target, control, evidence)
-        plan_events = build_plan_events(focal_id, target, control, content_scope, policy)
+        if override == "LOCAL_ONLY":
+            return "memory_store"
+        if override in ("ASK", "HOLD"):
+            return "user"
 
-        session["last_focal_id"] = focal_id
-        session["last_target"] = target
-        session["last_control"] = control
+        rm = record_map(records_of(task))
+        if "persistent_memory_write" in rm:
+            return "memory_store"
+
+        # A route confirmed in an earlier turn can be explicitly superseded.
+        changed = rm.get("target_changed_after_turn")
+        if isinstance(changed, str) and changed and changed not in ("prior_success_route_superseded",):
+            return changed
+
+        resolved = _resolved_target_value(rm)
+        if resolved:
+            return resolved
+
+        from_memory = _target_from_memory_recall(task, rm, self.memory)
+        if from_memory:
+            return from_memory
+
+        attrs = focal.get("attrs") or {}
+        for key in ("recipient", "target", "channel", "app", "merchant", "name"):
+            if attrs.get(key):
+                return str(attrs[key])
+        return str(session.get("last_target") or "user")
+
+    def decide_control(self, task: dict[str, Any], focal: dict[str, Any], target: str, evidence: dict[str, Any]) -> str:
+        override = classify_task_override(task)
+        rm = record_map(records_of(task))
+
+        if override == "LOCAL_ONLY":
+            return "proceed"
+        if override == "ASK":
+            return "ask"
+        if override == "HOLD":
+            return "hold"
+        if override == "AMEND":
+            return "amend"
+
+        if "persistent_memory_write" in rm:
+            return "proceed"
+
+        # Hard safety stops.
+        if "security_alert" in rm or "safety_mode" in rm or "privacy_guard" in rm:
+            return "hold"
+        consent_val = text_of(rm.get("consent")).lower()
+        if consent_val and any(w in consent_val for w in _CONSENT_NEGATIVE):
+            return "hold"
+
+        dispatch = _dispatch_state(rm)
+        boundary = _boundary_state(rm)
+        external_policy = rm.get("external_share_policy")
+        ambiguous_target = rm.get("ambiguous_target")
+        ambiguous_focal = bool(rm.get("ambiguous_focal"))
+
+        # 1) Exact, controlled-comparison-backed combination -> use it
+        #    verbatim, whether it's "matched" (replicated) or "single"
+        #    (observed once).
+        rule = _lookup_control_table(dispatch, boundary, ambiguous_target, ambiguous_focal)
+        if rule is not None:
+            return rule.control
+
+        # 2) No exact combination on file: fall back to whichever single
+        #    field is independently well-supported on its own.
+        #    dispatch_authority_check == user_binding_pending is confirmed to
+        #    mean "hold" regardless of the other fields.
+        if dispatch == "user_binding_pending":
+            return "hold"
+        if dispatch == "authority_incomplete":
+            return "ask"
+        if boundary == "dispatch_blocked_until_binding":
+            return "ask"
+
+        if external_policy in ("raw_quote_forbidden", "raw_sensitive_forbidden", "summary_only_allowed"):
+            return "amend"
+        if external_policy == "doctor_note_forbidden":
+            return "hold"
+        if boundary == "redacted_external_boundary":
+            return "amend"
+        if evidence.get("requires_redaction"):
+            return "amend"
+        if ambiguous_target or ambiguous_focal:
+            return "ask"
+
+        # No structured route/ambiguity/policy signal fired at all: fall
+        # back to the session's overall share posture as the deciding factor.
+        if rm.get("session_share_policy") == "strict":
+            return "amend"
+        return "proceed"
+
+    def build_content_scope(self, task: dict[str, Any], focal: dict[str, Any], target: str, control: str, evidence: dict[str, Any]) -> dict[str, Any]:
+        rm = record_map(records_of(task))
+        boundary = _boundary_state(rm)
+
+        if control == "proceed" and (target == "memory_store" or boundary == "local_update_boundary"):
+            return dict(LOCAL_UPDATE_SCOPE)
+
+        sensitive = sensitive_fields_of(focal)
+
+        if control == "hold":
+            return {"mode": "none", "allowed_fields": [], "excluded_fields": [], "requires_user_confirmation": False}
+
+        if control == "ask":
+            excluded = sorted(sensitive) if sensitive else ["raw_quote"]
+            return {"mode": "summary", "allowed_fields": ["status"], "excluded_fields": excluded, "requires_user_confirmation": True}
+
+        if control == "amend":
+            excluded = sorted(sensitive) if sensitive else ["raw_quote"]
+            needs_confirm = bool(rm.get("ambiguous_target"))
+            return {"mode": "redacted", "allowed_fields": ["summary"], "excluded_fields": excluded, "requires_user_confirmation": needs_confirm}
+
+        # proceed to an external target already confirmed as an approved,
+        # trusted channel: nothing needs to be withheld.
+        if rm.get("ambiguous_target") == "approved_channel_or_visible_recipient" and boundary == "redacted_external_boundary":
+            return {"mode": "raw", "allowed_fields": ["summary", "title"], "excluded_fields": [], "requires_user_confirmation": False}
+
+        excluded = sorted(sensitive) if sensitive else ["raw_quote"]
+        return {"mode": "summary", "allowed_fields": ["summary", "title", "status"], "excluded_fields": excluded, "requires_user_confirmation": False}
+
+    def build_policy(self, task: dict[str, Any], focal: dict[str, Any], target: str, control: str, evidence: dict[str, Any]) -> dict[str, Any]:
+        rm = record_map(records_of(task))
+        flags: set[str] = set(evidence.get("risk_flags", []))
+        violations: set[str] = set()
+
+        if rm.get("session_share_policy") == "strict":
+            flags.add("strict_share_policy")
+        if rm.get("ambiguous_target"):
+            flags.add("target_ambiguity")
+        if rm.get("ambiguous_focal"):
+            flags.add("ambiguous_focal")
+        if sensitive_fields_of(focal):
+            flags.add("sensitive_content")
+
+        consent_val = text_of(rm.get("consent")).lower()
+        consent_revoked = bool(consent_val) and any(w in consent_val for w in _CONSENT_NEGATIVE)
+        # Note: "consent_revoked" itself is never the reference violations
+        # value -- a revoked consent that blocks the request shows up as
+        # precondition_changed_ignored (handled in the hold branch below);
+        # if the request is instead confined to a local-only update, no
+        # violation is recorded at all (nothing was actually shared against
+        # the revoked consent).
+
+        requires_confirmation = control == "ask"
+
+        dispatch = _dispatch_state(rm)
+        boundary = _boundary_state(rm)
+        if control == "proceed" and (target == "memory_store" or boundary == "local_update_boundary"):
+            flags.add("local_only")
+            if dispatch == "internal_binding_confirmed":
+                flags.add("precondition_changed")
+            if target not in ("memory_store", "user"):
+                flags.add("external_share")
+            requires_confirmation = bool(rm.get("ambiguous_target"))
+
+        if control == "hold":
+            if dispatch in ("user_binding_pending", "authority_incomplete") or "focal_resolution_trace" in rm or consent_revoked:
+                flags.add("precondition_invalidated")
+                violations.add("precondition_changed_ignored")
+            if "security_alert" in rm:
+                flags.add("security_alert")
+            if "safety_mode" in rm or consent_revoked:
+                flags.add("safety")
+            if target not in ("memory_store", "user"):
+                flags.add("external_share")
+            requires_confirmation = False
+
+        if control == "amend":
+            flags.add("minimal_disclosure")
+            if target not in ("memory_store", "user"):
+                flags.add("external_share")
+            requires_confirmation = bool(rm.get("ambiguous_target"))
+
+        if control == "ask":
+            flags.add("clarification_required")
+            if dispatch == "internal_binding_confirmed":
+                flags.add("precondition_changed")
 
         return {
-            "focal_id": focal_id,
-            "target": target,
-            "control": control,
-            "content_scope": content_scope,
-            "policy": policy,
-            "plan_events": plan_events,
-            "user_response": user_response(control, target, content_scope, policy),
-            "audit_tags": evidence.get("audit_tags", []),
-            "counterfactual": "최신 기록, 동의 상태, 공유 범위, 보안 신호가 바뀌면 판단이 달라질 수 있습니다.",
+            "risk_flags": sorted(flags),
+            "violations": sorted(violations),
+            "requires_confirmation": requires_confirmation,
         }
+
+    def build_plan_events(self, task: dict[str, Any], focal_id: str, target: str, control: str, scope: dict[str, Any], policy: dict[str, Any]) -> list[dict[str, Any]]:
+        if target == "memory_store" and control == "proceed":
+            return [
+                {"verb": "read", "target": focal_id, "args": {"purpose": "local_update"}},
+                {"verb": "verify", "target": "share_boundary_update", "args": {"scope": "local_update"}},
+                {"verb": "update", "target": focal_id, "args": {"state": "local_status_only"}},
+            ]
+
+        if control == "hold":
+            reason = "precondition_invalidated" if "precondition_invalidated" in policy.get("risk_flags", []) else "strict_policy_block"
+            if "security_alert" in policy.get("risk_flags", []):
+                reason = "security_alert"
+            return [
+                {"verb": "read", "target": focal_id, "args": {"purpose": reason if reason != "strict_policy_block" else "invalidated_precondition"}},
+                {"verb": "guard", "target": focal_id, "args": {"reason": reason}},
+            ]
+
+        if control == "ask":
+            flags = policy.get("risk_flags", [])
+            # An ask that challenges a route that was already confirmed
+            # reads as "please reconfirm a precondition", not "please
+            # resolve a fresh ambiguity" -- different public-ontology reasons.
+            if "precondition_changed" in flags:
+                purpose, reason = "clarify_precondition", "precondition_changed"
+            elif "target_ambiguity" in flags:
+                purpose = reason = "route_resolution_required"
+            else:
+                purpose = reason = "clarification_required"
+            return [
+                {"verb": "read", "target": focal_id, "args": {"purpose": purpose}},
+                {"verb": "clarify", "target": "user", "args": {"reason": reason}},
+            ]
+
+        events = [{"verb": "read", "target": focal_id, "args": {"purpose": "minimal_disclosure" if control == "amend" else "inspect_context"}}]
+        if control == "amend" or scope.get("mode") == "redacted":
+            events.append({"verb": "redact", "target": focal_id, "args": {"remove": _plan_remove_value(scope.get("excluded_fields"))}})
+        elif scope.get("mode") in ("summary", "status_only"):
+            events.append({"verb": "summarize", "target": focal_id, "args": {"mode": scope.get("mode")}})
+        events.append({"verb": "dispatch", "target": target, "args": {"scope": scope.get("mode")}})
+        return events
+
+    def user_response(self, control: str, target: str, scope: dict[str, Any], policy: dict[str, Any]) -> str:
+        if control == "hold":
+            return "보안, 동의 또는 정책 조건 때문에 진행하지 않겠습니다."
+        if control == "ask":
+            return "대상이나 허용 범위를 한 번 더 확인해야 합니다."
+        if target == "memory_store":
+            return "외부로 보내지 않고 기기 내부 상태만 갱신하겠습니다."
+        if control == "amend":
+            return f"민감 정보를 제외하고 {target}(으)로 진행하겠습니다."
+        return f"요청한 범위로 {target}(으)로 진행하겠습니다."
 
 
 # --------------------------------------------------------------------------
-# Runner
+# Local runner (same shape as the baseline notebook's runner section)
 # --------------------------------------------------------------------------
 def load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
@@ -860,6 +871,17 @@ def participant_task_view(task: dict[str, Any]) -> dict[str, Any]:
     return view
 
 
+def answer_one(harness: Any, task: dict[str, Any], session: dict[str, Any]) -> dict[str, Any]:
+    for name in ("answer_task", "solve_task", "solve"):
+        fn = getattr(harness, name, None)
+        if callable(fn):
+            answer = fn(task, session)
+            if not isinstance(answer, dict):
+                raise RuntimeError(f"{name} returned non-object for task {task.get('id')}")
+            return answer
+    raise RuntimeError("harness must expose answer_task(task, session), solve_task(...), or solve(...)")
+
+
 def run_harness(tasks: list[dict[str, Any]], harness_cls: type = FinalHarness, *, harness_name: str = "sogang_harness") -> dict[str, Any]:
     ordered = sorted(tasks, key=lambda t: (str(t.get("session_id", "")), int(t.get("turn_index", 0)), str(t.get("id", ""))))
     harness = harness_cls()
@@ -872,7 +894,7 @@ def run_harness(tasks: list[dict[str, Any]], harness_cls: type = FinalHarness, *
     for task in ordered:
         sid = str(task.get("session_id", ""))
         session = sessions.setdefault(sid, {})
-        answers[str(task["id"])] = harness.answer_task(participant_task_view(task), session)
+        answers[str(task["id"])] = answer_one(harness, participant_task_view(task), session)
 
     return {
         "schema": SUBMISSION_SCHEMA,
