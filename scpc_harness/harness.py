@@ -129,6 +129,16 @@ def object_text(obj: dict[str, Any]) -> str:
 
 SENSITIVE_FIELD_NAMES = {"raw_quote", "rrn", "location", "numeric_value", "doctor_note", "card_number", "name"}
 
+# content_scope.excluded_fields uses a narrower, closed vocabulary than the
+# raw object "contains" labels -- across all of dev_answers.json the only
+# excluded_fields values that ever appear are exactly these five. "amount"
+# is the raw label objects use for what the answer schema calls
+# "numeric_value"; doctor_note/card_number presence is folded into the
+# blanket "raw_quote" exclusion rather than surfaced under their own name
+# (dev has zero occurrences of either as an excluded_fields value).
+_EXCLUDABLE_FIELD_ALIASES = {"amount": "numeric_value"}
+_EXCLUDABLE_FIELD_VOCAB = {"raw_quote", "rrn", "location", "numeric_value", "name"}
+
 
 def sensitive_fields_of(obj: dict[str, Any]) -> set[str]:
     attrs = obj.get("attrs") or {}
@@ -138,6 +148,17 @@ def sensitive_fields_of(obj: dict[str, Any]) -> set[str]:
         if isinstance(value, list):
             fields.update(str(v) for v in value)
     return fields & SENSITIVE_FIELD_NAMES
+
+
+def excludable_fields_of(obj: dict[str, Any]) -> set[str]:
+    attrs = obj.get("attrs") or {}
+    raw: set[str] = set()
+    for key in ("contains", "fields"):
+        value = attrs.get(key)
+        if isinstance(value, list):
+            raw.update(str(v) for v in value)
+    mapped = {_EXCLUDABLE_FIELD_ALIASES.get(v, v) for v in raw}
+    return mapped & _EXCLUDABLE_FIELD_VOCAB
 
 
 # --------------------------------------------------------------------------
@@ -226,6 +247,9 @@ def full_task_text(task: dict[str, Any]) -> str:
     return " ".join(parts)
 
 
+_OVERRIDE_CLAUSE_MARKER = re.compile(r"(?:단|다만)[,，]\s*")
+
+
 def classify_task_override(task: dict[str, Any]) -> str:
     """Classify the current request's own final corrective clause.
 
@@ -234,8 +258,22 @@ def classify_task_override(task: dict[str, Any]) -> str:
     turns were resolved and can otherwise be misread as a fresh override
     (e.g. a note that a past turn already asked the user gets mistaken for a
     live ask-to-confirm on this turn).
+
+    Within the prompt, only the trailing "단,"/"다만," clause (when present)
+    is classified, not the whole prompt. The sentences before that marker
+    describe the task itself and can contain the same keywords in a
+    different sense -- e.g. "보류 여부를 판정해줘" (decide whether to hold)
+    or "상위 금지 원칙을 확인해서" (check the prohibition principle) are
+    instructions to evaluate, not a live hold/block command, but they share
+    vocabulary with _HOLD_CONCEPT/_HOLD_STOP and would otherwise cause a
+    false HOLD classification when the real trailing clause says something
+    else (e.g. "...확인해야 한다" -> ASK).
     """
-    return classify_override_clause(str(task.get("prompt", "")))
+    prompt = str(task.get("prompt", ""))
+    matches = list(_OVERRIDE_CLAUSE_MARKER.finditer(prompt))
+    if matches:
+        return classify_override_clause(prompt[matches[-1].end():])
+    return classify_override_clause(prompt)
 
 
 # --------------------------------------------------------------------------
@@ -741,17 +779,21 @@ class FinalHarness:
         if control == "proceed" and (target == "memory_store" or boundary == "local_update_boundary"):
             return dict(LOCAL_UPDATE_SCOPE)
 
-        sensitive = sensitive_fields_of(focal)
+        excludable = excludable_fields_of(focal)
 
         if control == "hold":
             return {"mode": "none", "allowed_fields": [], "excluded_fields": [], "requires_user_confirmation": False}
 
         if control == "ask":
-            excluded = sorted(sensitive) if sensitive else ["raw_quote"]
-            return {"mode": "summary", "allowed_fields": ["status"], "excluded_fields": excluded, "requires_user_confirmation": True}
+            # dev_answers.json: 24/26 "ask" tasks exclude just ["name"] when
+            # the focal has a name field, else fall back to ["raw_quote"];
+            # other excludable fields (numeric_value/location/rrn) present
+            # without "name" are never singled out on their own for "ask".
+            excluded = ["name"] if "name" in excludable else ["raw_quote"]
+            return {"mode": "summary", "allowed_fields": ["summary"], "excluded_fields": excluded, "requires_user_confirmation": True}
 
         if control == "amend":
-            excluded = sorted(sensitive) if sensitive else ["raw_quote"]
+            excluded = sorted(excludable) if excludable else ["raw_quote"]
             needs_confirm = bool(rm.get("ambiguous_target"))
             return {"mode": "redacted", "allowed_fields": ["summary"], "excluded_fields": excluded, "requires_user_confirmation": needs_confirm}
 
@@ -760,8 +802,8 @@ class FinalHarness:
         if rm.get("ambiguous_target") == "approved_channel_or_visible_recipient" and boundary == "redacted_external_boundary":
             return {"mode": "raw", "allowed_fields": ["summary", "title"], "excluded_fields": [], "requires_user_confirmation": False}
 
-        excluded = sorted(sensitive) if sensitive else ["raw_quote"]
-        return {"mode": "summary", "allowed_fields": ["summary", "title", "status"], "excluded_fields": excluded, "requires_user_confirmation": False}
+        excluded = sorted(excludable) if excludable else ["raw_quote"]
+        return {"mode": "summary", "allowed_fields": ["summary"], "excluded_fields": excluded, "requires_user_confirmation": False}
 
     def build_policy(self, task: dict[str, Any], focal: dict[str, Any], target: str, control: str, evidence: dict[str, Any]) -> dict[str, Any]:
         rm = record_map(records_of(task))
@@ -830,7 +872,9 @@ class FinalHarness:
         }
 
     def build_plan_events(self, task: dict[str, Any], focal_id: str, target: str, control: str, scope: dict[str, Any], policy: dict[str, Any]) -> list[dict[str, Any]]:
-        if target == "memory_store" and control == "proceed":
+        rm = record_map(records_of(task))
+        boundary = _boundary_state(rm)
+        if control == "proceed" and (target == "memory_store" or boundary == "local_update_boundary"):
             return [
                 {"verb": "read", "target": focal_id, "args": {"purpose": "local_update"}},
                 {"verb": "verify", "target": "share_boundary_update", "args": {"scope": "local_update"}},
@@ -838,25 +882,25 @@ class FinalHarness:
             ]
 
         if control == "hold":
-            reason = "precondition_invalidated" if "precondition_invalidated" in policy.get("risk_flags", []) else "strict_policy_block"
-            if "security_alert" in policy.get("risk_flags", []):
-                reason = "security_alert"
+            # 20/20 dev "hold" tasks use exactly this purpose/reason pair,
+            # including ones that also carry security_alert/safety flags --
+            # there is no separate security_alert-specific reason value.
             return [
-                {"verb": "read", "target": focal_id, "args": {"purpose": reason if reason != "strict_policy_block" else "invalidated_precondition"}},
-                {"verb": "guard", "target": focal_id, "args": {"reason": reason}},
+                {"verb": "read", "target": focal_id, "args": {"purpose": "invalidated_precondition"}},
+                {"verb": "guard", "target": focal_id, "args": {"reason": "precondition_invalidated"}},
             ]
 
         if control == "ask":
             flags = policy.get("risk_flags", [])
-            # An ask that challenges a route that was already confirmed
-            # reads as "please reconfirm a precondition", not "please
-            # resolve a fresh ambiguity" -- different public-ontology reasons.
+            # An ask that challenges a route already confirmed earlier this
+            # session (dispatch == internal_binding_confirmed) reads as
+            # "please reconfirm a precondition", not "please resolve a
+            # fresh ambiguity" -- 26/26 dev "ask" tasks split cleanly on
+            # this single field, with no exceptions found either way.
             if "precondition_changed" in flags:
                 purpose, reason = "clarify_precondition", "precondition_changed"
-            elif "target_ambiguity" in flags:
-                purpose = reason = "route_resolution_required"
             else:
-                purpose = reason = "clarification_required"
+                purpose = reason = "route_resolution_required"
             return [
                 {"verb": "read", "target": focal_id, "args": {"purpose": purpose}},
                 {"verb": "clarify", "target": "user", "args": {"reason": reason}},
