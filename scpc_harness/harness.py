@@ -715,6 +715,8 @@ class FinalHarness:
             return "amend"
         if ambiguous_target or ambiguous_focal:
             return "ask"
+        if "memory_conflict" in rm:
+            return "ask"
 
         # No structured route/ambiguity/policy signal fired at all: fall
         # back to the session's overall share posture as the deciding factor.
