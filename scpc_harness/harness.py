@@ -444,6 +444,24 @@ def _target_from_memory_recall(task: dict[str, Any], rm: dict[str, Any], memory:
     return None
 
 
+def _recalled_memory_conflicts(task: dict[str, Any], rm: dict[str, Any], memory: dict[str, Any]) -> bool:
+    """True if the current request textually clashes with a stored
+    preference recalled this turn (e.g. mem.avoid == "cake" but the
+    request is to send a cake coupon). Only "avoid" is checked -- it is
+    the one memory field whose value being *present* in the prompt is
+    unambiguously a conflict signal (unlike e.g. "tone"/"gift_hint",
+    where a matching mention would be agreement, not conflict).
+    """
+    recall = rm.get("persistent_memory_recall")
+    if not isinstance(recall, dict):
+        return False
+    mem = memory.get(str(recall.get("memory_key"))) or memory.get(str(recall.get("person")))
+    if not isinstance(mem, dict):
+        return False
+    avoid = mem.get("avoid")
+    return bool(avoid) and str(avoid) in str(task.get("prompt", ""))
+
+
 # --------------------------------------------------------------------------
 # Control decision helpers
 # --------------------------------------------------------------------------
@@ -771,7 +789,7 @@ class FinalHarness:
             return "amend"
         if ambiguous_target or ambiguous_focal:
             return "ask"
-        if "memory_conflict" in rm:
+        if "memory_conflict" in rm or _recalled_memory_conflicts(task, rm, self.memory):
             return "ask"
         if "enterprise_policy_recall" in rm:
             return "amend"
