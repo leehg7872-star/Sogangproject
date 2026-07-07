@@ -468,21 +468,30 @@ def _recalled_memory_conflicts(task: dict[str, Any], rm: dict[str, Any], memory:
 _CONSENT_NEGATIVE = ("revoked", "withdraw", "denied", "철회", "거부")
 
 # The screening pool introduces record values never seen in dev for fields the
-# control ladder already depends on (e.g. dispatch_authority_check ==
-# "local_authority_confirmed", share_boundary_update ==
-# "redacted_after_selection_boundary"). Their co-occurrence with the other
-# route-family fields matches the known value they stand in for (same
-# share_boundary_update / route_candidate_snapshot distribution as their
-# sibling), so they are treated as aliases rather than left to silently fall
-# through to a worse generic branch. Any value that is still unrecognized
-# after alias resolution is mapped to the most cautious *known* state for
-# that field, rather than falling through silently -- an unfamiliar state is
-# itself a signal that nothing has been verified yet.
+# control ladder already depends on. Each alias below was chosen by which
+# *known* value has the same dispatch<->boundary co-occurrence partner set
+# across the full 700-task screening pool (a clean, 2-field cross-tab, not
+# textual similarity):
+#   - dispatch=="local_authority_confirmed" pairs only with
+#     {local_update_boundary, redacted_external_boundary} (68, 36; 0 with
+#     dispatch_blocked_until_binding) -- exactly internal_binding_confirmed's
+#     own partner set.
+#   - boundary=="redacted_after_selection_boundary" pairs only with
+#     {authority_incomplete, user_binding_pending} (34, 39; 0 with
+#     internal_binding_confirmed) -- exactly dispatch_blocked_until_binding's
+#     own partner set, *not* redacted_external_boundary's (which does pair
+#     with internal_binding_confirmed, 26 times). All 23 tasks where this
+#     alias changes the final control (authority_incomplete + approved_
+#     channel_or_visible_recipient) also carry guardrail_ladder_signal,
+#     matching the _CONTROL_TABLE entry's own evidence note.
+# Any value still unrecognized after alias resolution maps to the most
+# cautious *known* state for that field rather than falling through
+# silently -- an unfamiliar state is itself a signal nothing is verified yet.
 _DISPATCH_ALIASES = {"local_authority_confirmed": "internal_binding_confirmed"}
 _KNOWN_DISPATCH = {"user_binding_pending", "authority_incomplete", "internal_binding_confirmed"}
 _DISPATCH_UNKNOWN_DEFAULT = "authority_incomplete"
 
-_BOUNDARY_ALIASES = {"redacted_after_selection_boundary": "redacted_external_boundary"}
+_BOUNDARY_ALIASES = {"redacted_after_selection_boundary": "dispatch_blocked_until_binding"}
 _KNOWN_BOUNDARY = {"local_update_boundary", "redacted_external_boundary", "dispatch_blocked_until_binding"}
 _BOUNDARY_UNKNOWN_DEFAULT = "redacted_external_boundary"
 
