@@ -416,13 +416,32 @@ _HEALTH_WORDS = ("건강", "검진", "복약", "점검", "병원", "진료")
 _LIGHTING_WORDS = ("조명", "불빛", "밝기")
 
 
-def _target_from_memory_recall(task: dict[str, Any], rm: dict[str, Any], memory: dict[str, Any]) -> str | None:
-    recall = rm.get("persistent_memory_recall")
+def _recalled_profile(recall: Any, memory: dict[str, Any]) -> dict[str, Any] | None:
+    """Resolve a persistent_memory_recall to its stored profile by
+    memory_key ONLY -- never by person name.
+
+    memory_key uniquely identifies one saved profile; the same person can
+    hold several profiles across sessions with different channels/rooms, so
+    falling back to a person-name match grabs whichever sibling profile
+    happened to be stored and yields a wrong channel. Measured on dev:
+    key-matched recalls resolve the target 8/8 correct, while the single
+    person-fallback-only recall (511b1dc0b84d, key absent) was wrong; on
+    screening the fallback path is never even reached (13 key-hit, 0
+    person-only, 4 with neither present). So a missing key means "profile
+    genuinely absent from this slice", and the caller should fall through
+    to its non-memory path rather than trust a same-name stand-in.
+    """
     if not isinstance(recall, dict):
         return None
-    mem = memory.get(str(recall.get("memory_key"))) or memory.get(str(recall.get("person")))
-    if not isinstance(mem, dict):
+    profile = memory.get(str(recall.get("memory_key")))
+    return profile if isinstance(profile, dict) else None
+
+
+def _target_from_memory_recall(task: dict[str, Any], rm: dict[str, Any], memory: dict[str, Any]) -> str | None:
+    mem = _recalled_profile(rm.get("persistent_memory_recall"), memory)
+    if mem is None:
         return None
+    recall = rm.get("persistent_memory_recall")
 
     memory_class = recall.get("memory_class")
     if memory_class == "prior_result" and mem.get("last_success_target"):
@@ -452,11 +471,8 @@ def _recalled_memory_conflicts(task: dict[str, Any], rm: dict[str, Any], memory:
     unambiguously a conflict signal (unlike e.g. "tone"/"gift_hint",
     where a matching mention would be agreement, not conflict).
     """
-    recall = rm.get("persistent_memory_recall")
-    if not isinstance(recall, dict):
-        return False
-    mem = memory.get(str(recall.get("memory_key"))) or memory.get(str(recall.get("person")))
-    if not isinstance(mem, dict):
+    mem = _recalled_profile(rm.get("persistent_memory_recall"), memory)
+    if mem is None:
         return False
     avoid = mem.get("avoid")
     return bool(avoid) and str(avoid) in str(task.get("prompt", ""))
@@ -617,6 +633,8 @@ class FinalHarness:
         # recalling session in our processing order. Pre-scanning all
         # tasks' persistent_memory_write records makes profile lookup
         # order-independent (writes are task inputs, not answers).
+        # Keyed by memory_key only; profiles are resolved by that unique id,
+        # never by person name (see _recalled_profile for why).
         self.memory.clear()
         for task in tasks:
             for record in records_of(task):
@@ -624,8 +642,6 @@ class FinalHarness:
                     value = record["value"]
                     if value.get("memory_key"):
                         self.memory[str(value["memory_key"])] = value
-                    if value.get("person"):
-                        self.memory.setdefault(str(value["person"]), value)
 
     def answer_task(self, task: dict[str, Any], session: dict[str, Any]) -> dict[str, Any]:
         evidence = self.slm.summarize_task(task)
@@ -659,11 +675,8 @@ class FinalHarness:
             if record.get("type") == "persistent_memory_write" and isinstance(record.get("value"), dict):
                 value = record["value"]
                 memory_key = str(value.get("memory_key") or "")
-                person = str(value.get("person") or "")
                 if memory_key:
                     self.memory[memory_key] = value
-                if person:
-                    self.memory[person] = value
         session["last_evidence"] = evidence
 
     def choose_focal(self, task: dict[str, Any], session: dict[str, Any], evidence: dict[str, Any]) -> dict[str, Any]:
@@ -833,8 +846,8 @@ class FinalHarness:
         # prior_failure_lesson is itself a public-ontology value).
         recall = rm.get("persistent_memory_recall")
         if isinstance(recall, dict) and recall.get("memory_class") == "prior_result":
-            profile = self.memory.get(str(recall.get("memory_key"))) or self.memory.get(str(recall.get("person")))
-            if isinstance(profile, dict) and profile.get("last_failure_reason"):
+            profile = _recalled_profile(recall, self.memory)
+            if profile is not None and profile.get("last_failure_reason"):
                 return "amend"
         if "enterprise_policy_recall" in rm:
             return "amend"
@@ -1197,8 +1210,8 @@ def diagnose_control_branch(task: dict[str, Any], memory: dict[str, Any]) -> str
         return "fallback:memory_conflict_derived"
     recall = rm.get("persistent_memory_recall")
     if isinstance(recall, dict) and recall.get("memory_class") == "prior_result":
-        profile = memory.get(str(recall.get("memory_key"))) or memory.get(str(recall.get("person")))
-        if isinstance(profile, dict) and profile.get("last_failure_reason"):
+        profile = _recalled_profile(recall, memory)
+        if profile is not None and profile.get("last_failure_reason"):
             return "fallback:prior_failure_lesson"
     if "enterprise_policy_recall" in rm:
         return "fallback:enterprise_policy"
