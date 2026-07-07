@@ -1103,6 +1103,129 @@ def run_harness(tasks: list[dict[str, Any]], harness_cls: type = FinalHarness, *
     }
 
 
+# --------------------------------------------------------------------------
+# Self-diagnostic journal: a read-only mirror of decide_control's branch
+# order (same helper functions, same order), used only to tag *which*
+# branch a task actually fell into and to flag candidate contradictions --
+# it never feeds back into an actual answer. Two things this catches that
+# a bare "does it crash" sanity check does not:
+#   1) branches whose usage count jumps unexpectedly between two task
+#      pools (e.g. a fallback rung that fires 2/700 in one run and 200/700
+#      in the next -- a sign some upstream classification broke);
+#   2) two tasks sharing an identical feature key (dispatch/boundary/
+#      ambiguity/session-share/consent/memory-class/hard-stop flags) that
+#      still land on different controls -- either a real gap in the
+#      feature key (add the missing field) or a genuine same-input-
+#      different-answer case in the reference data itself (see
+#      build_content_scope's mode ambiguity, which this cannot fix).
+# --------------------------------------------------------------------------
+def diagnose_control_branch(task: dict[str, Any], memory: dict[str, Any]) -> str:
+    override = classify_task_override(task)
+    rm = record_map(records_of(task))
+    if override in ("LOCAL_ONLY", "ASK", "HOLD", "AMEND"):
+        return f"override:{override}"
+    if "persistent_memory_write" in rm:
+        return "memwrite:proceed"
+    if "security_alert" in rm or "safety_mode" in rm or "privacy_guard" in rm:
+        return "hardstop:hold"
+    consent_val = text_of(rm.get("consent")).lower()
+    if consent_val and any(w in consent_val for w in _CONSENT_NEGATIVE):
+        return "hardstop:consent_revoked"
+
+    dispatch = _dispatch_state(rm)
+    boundary = _boundary_state(rm)
+    external_policy = rm.get("external_share_policy")
+    ambiguous_target = rm.get("ambiguous_target")
+    ambiguous_focal = bool(rm.get("ambiguous_focal"))
+
+    rule = _lookup_control_table(dispatch, boundary, ambiguous_target, ambiguous_focal)
+    if rule is not None:
+        return f"table:{rule.tier}"
+
+    if "target_changed_after_turn" in rm:
+        return "fallback:target_changed"
+    if dispatch == "user_binding_pending":
+        return "fallback:dispatch_user_binding_pending"
+    if dispatch == "authority_incomplete":
+        return "fallback:dispatch_authority_incomplete"
+    if boundary == "dispatch_blocked_until_binding":
+        return "fallback:boundary_blocked"
+    if external_policy in ("raw_quote_forbidden", "raw_sensitive_forbidden", "summary_only_allowed"):
+        return "fallback:external_policy_amend"
+    if external_policy == "doctor_note_forbidden":
+        return "fallback:external_policy_hold"
+    if boundary == "redacted_external_boundary":
+        return "fallback:boundary_redacted"
+    # evidence.requires_redaction is intentionally not mirrored here (it
+    # needs the live FixedSLMClient evidence dict, not just static
+    # records); tasks it would have caught fall through to a later tag
+    # instead, which is fine for aggregate reporting purposes.
+    if ambiguous_target or ambiguous_focal:
+        return "fallback:ambiguity"
+    if "memory_conflict" in rm:
+        return "fallback:memory_conflict_literal"
+    if _recalled_memory_conflicts(task, rm, memory):
+        return "fallback:memory_conflict_derived"
+    recall = rm.get("persistent_memory_recall")
+    if isinstance(recall, dict) and recall.get("memory_class") == "prior_result":
+        profile = memory.get(str(recall.get("memory_key"))) or memory.get(str(recall.get("person")))
+        if isinstance(profile, dict) and profile.get("last_failure_reason"):
+            return "fallback:prior_failure_lesson"
+    if "enterprise_policy_recall" in rm:
+        return "fallback:enterprise_policy"
+    if rm.get("session_share_policy") == "strict":
+        return "fallback:strict_default_amend"
+    return "fallback:proceed_default"
+
+
+def _contradiction_key(task: dict[str, Any], rm: dict[str, Any]) -> tuple[Any, ...]:
+    recall = rm.get("persistent_memory_recall")
+    return (
+        _dispatch_state(rm), _boundary_state(rm),
+        rm.get("ambiguous_target"), bool(rm.get("ambiguous_focal")),
+        rm.get("session_share_policy"), rm.get("external_share_policy"),
+        "security_alert" in rm, "safety_mode" in rm, "privacy_guard" in rm,
+        "persistent_memory_write" in rm, "target_changed_after_turn" in rm,
+        "memory_conflict" in rm, "enterprise_policy_recall" in rm,
+        rm.get("consent"),
+        recall.get("memory_class") if isinstance(recall, dict) else None,
+    )
+
+
+def audit_run(tasks: list[dict[str, Any]], payload: dict[str, Any]) -> dict[str, Any]:
+    """Aggregate branch-usage counts and same-key control contradictions
+    for a completed run. Call after run_harness(); purely a report, does
+    not alter payload."""
+    import collections
+
+    harness = FinalHarness()
+    harness.prepare(tasks)
+
+    tag_counts: collections.Counter = collections.Counter()
+    tag_controls: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
+    key_controls: dict[tuple[Any, ...], set] = collections.defaultdict(set)
+
+    for task in tasks:
+        tid = str(task["id"])
+        control = payload["answers"][tid]["control"]
+        tag = diagnose_control_branch(task, harness.memory)
+        tag_counts[tag] += 1
+        tag_controls[tag][control] += 1
+
+        rm = record_map(records_of(task))
+        if classify_task_override(task) == "GENERIC":
+            key_controls[_contradiction_key(task, rm)].add(control)
+
+    contradictions = {k: v for k, v in key_controls.items() if len(v) > 1}
+    return {
+        "n": len(tasks),
+        "branch_counts": {tag: n for tag, n in tag_counts.most_common()},
+        "branch_controls": {tag: dict(tag_controls[tag]) for tag in tag_counts},
+        "generic_keys": len(key_controls),
+        "contradictions": [{"key": list(k), "controls": sorted(v)} for k, v in contradictions.items()],
+    }
+
+
 def write_submission_csv(payload: dict[str, Any], path: Path) -> None:
     with path.open("w", encoding="utf-8", newline="") as f:
         writer = csv.writer(f)
@@ -1131,6 +1254,12 @@ def main() -> None:
         write_submission_csv(payload, out_path)
         print("wrote:", out_path)
         print("answers:", len(payload["answers"]))
+    elif mode == "audit":
+        pool = sys.argv[2] if len(sys.argv) > 2 else "submit"
+        tasks = load_jsonl(DATA_DIR / ("dev_tasks.jsonl" if pool == "dev" else "screening_tasks.jsonl"))
+        payload = run_harness(tasks, FinalHarness, harness_name="audit")
+        report = audit_run(tasks, payload)
+        print(json.dumps(report, ensure_ascii=False, indent=2))
     else:
         raise SystemExit(f"unknown mode: {mode}")
 
