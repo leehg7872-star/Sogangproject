@@ -871,6 +871,32 @@ class FinalHarness:
             # other excludable fields (numeric_value/location/rrn) present
             # without "name" are never singled out on their own for "ask".
             excluded = ["name"] if "name" in excludable else ["raw_quote"]
+
+            # mode is intentionally always "summary" here, never "redacted"/
+            # "none", despite 10/26 dev "ask" references using those instead
+            # (8 redacted, 2 none). This was investigated in depth and is
+            # dev-label noise, not a recoverable signal: no combination of
+            # (target, boundary, dispatch, ambiguous_target/focal,
+            # session_share_policy, excludable_fields, live-override-clause
+            # family) separates the 10 from the other 16. Two dev pairs make
+            # this concrete -- final_dev_8af3369d4151 (redacted) and
+            # final_dev_b994918288e9 (summary) share a byte-identical
+            # prompt, differing only in resolved_target's literal name and
+            # session_share_policy; final_dev_0a50781a4b36 (redacted) and
+            # final_dev_a553e284342b (summary) share every structured
+            # record verbatim (guardrail_ladder_signal / dispatch_authority_
+            # check / share_boundary_update / route_binding_order / target)
+            # and differ only in whether a trailing "단," clause is present.
+            # The one pattern that did line up (audit_vendor + a
+            # dispatch_blocked_until_binding boundary -> redacted, 2/2) is
+            # contradicted by the same boundary+strict combo landing on
+            # summary for user/family_room targets (3/3), so it is a
+            # coincidence of which literal target string got sampled, not a
+            # rule -- encoding it would just overfit these two dev rows and
+            # likely misfire on the 700-task screening set's own target
+            # names. With the true ask-mode split at summary 16 / redacted 8
+            # / none 2, always predicting summary is already the
+            # accuracy-maximizing call under this irreducible noise.
             return {"mode": "summary", "allowed_fields": ["summary"], "excluded_fields": excluded, "requires_user_confirmation": True}
 
         if control == "amend":
