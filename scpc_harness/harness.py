@@ -348,7 +348,18 @@ _DIRECT_CONFIRMED_PATTERNS = (
     re.compile(r"(WM-\d+)\s*만\s*통과"),
     re.compile(r"(?:유지된|승인\s*상태가\s*유지된)\s*참조는\s*(WM-\d+)"),
     re.compile(r"binding\s*(?:은|는)?\s*(WM-\d+)\s*(?:을|를)?\s*(?:현재\s*턴의)?\s*참조로\s*지정"),
+    # "검토 메모에는 A와 B가 보이지만 승인 표시가 남은 것은 B이다" -- the
+    # WM-code after "승인 표시가 남은 것은" is the confirmed one. The
+    # marker_* form of this exact sentence already resolves via the marker
+    # chain; this covers the raw-WM variant (dev 82d825a8b9fe).
+    re.compile(r"승인\s*표시가\s*남은\s*것은\s*(WM-\d+)"),
 )
+
+# History sometimes names candidates that were explicitly ruled out
+# ("WM-9051는 제외 후보로 남았다", "...는 보류 후보"). The weak ref-code
+# fallback must never pick one of these just because it appears first in
+# the object list.
+_EXCLUDED_CANDIDATE_PATTERN = re.compile(r"(WM-\d+)\s*(?:는|은)\s*(?:제외|보류)\s*후보")
 
 
 def _resolve_focal_via_history_text(task: dict[str, Any], object_by_ref: dict[str, dict[str, Any]]) -> dict[str, Any] | None:
@@ -712,22 +723,31 @@ class FinalHarness:
                 if candidate in object_by_id:
                     return object_by_id[candidate]
 
-        # 4) A ref_code literally mentioned anywhere in the visible history.
-        history_text = full_task_text(task).lower()
+        # 4) A ref_code literally mentioned anywhere in the visible history,
+        #    skipping any the history explicitly marks as an excluded/held-
+        #    back candidate (otherwise the first-listed object wins even
+        #    when the text names it as the *rejected* one).
+        history_raw = full_task_text(task)
+        history_text = history_raw.lower()
+        excluded_refs = {m.lower() for m in _EXCLUDED_CANDIDATE_PATTERN.findall(history_raw)}
         for obj in objects:
             ref_code = str((obj.get("attrs") or {}).get("ref_code") or "").lower()
-            if ref_code and ref_code in history_text:
+            if ref_code and ref_code in history_text and ref_code not in excluded_refs:
                 return obj
 
-        # 5) Last resort: token overlap between the prompt and object attrs.
+        # 5) Last resort: token overlap between the prompt and object attrs,
+        #    still avoiding any explicitly-excluded candidate.
         prompt_tokens = {tok for tok in re.findall(r"[A-Za-z0-9가-힣_]+", str(task.get("prompt", "")).lower()) if len(tok) >= 2}
-        best = objects[0]
+        best = None
         best_score = -1
         for obj in objects:
+            ref_code = str((obj.get("attrs") or {}).get("ref_code") or "").lower()
+            if ref_code and ref_code in excluded_refs:
+                continue
             score = sum(1 for tok in prompt_tokens if tok in object_text(obj))
             if score > best_score:
                 best, best_score = obj, score
-        return best
+        return best if best is not None else objects[0]
 
     def infer_target(self, task: dict[str, Any], focal: dict[str, Any], session: dict[str, Any], evidence: dict[str, Any]) -> str:
         override = classify_task_override(task)
