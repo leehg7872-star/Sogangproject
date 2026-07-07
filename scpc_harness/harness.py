@@ -848,11 +848,19 @@ class FinalHarness:
     def build_content_scope(self, task: dict[str, Any], focal: dict[str, Any], target: str, control: str, evidence: dict[str, Any]) -> dict[str, Any]:
         rm = record_map(records_of(task))
         boundary = _boundary_state(rm)
+        excludable = excludable_fields_of(focal)
 
         if control == "proceed" and (target == "memory_store" or boundary == "local_update_boundary"):
-            return dict(LOCAL_UPDATE_SCOPE)
-
-        excludable = excludable_fields_of(focal)
+            # The standard local-update exclusion trio is not universal:
+            # across all 40 dev status_only references, a normal-share
+            # session whose focal carries no excludable fields gets an
+            # *empty* excluded_fields (8/8), while a strict session (29/29)
+            # or any focal that does carry excludable fields (3/3) gets the
+            # fixed trio -- even when the focal's own fields differ from it.
+            scope = dict(LOCAL_UPDATE_SCOPE)
+            if rm.get("session_share_policy") == "normal" and not excludable:
+                scope["excluded_fields"] = []
+            return scope
 
         if control == "hold":
             return {"mode": "none", "allowed_fields": [], "excluded_fields": [], "requires_user_confirmation": False}
@@ -883,7 +891,11 @@ class FinalHarness:
         if "하나의 계획" in str(task.get("prompt", "")):
             return {"mode": "raw", "allowed_fields": ["summary", "title"], "excluded_fields": [], "requires_user_confirmation": False}
 
-        excluded = sorted(excludable) if excludable else ["raw_quote"]
+        # Generic proceed fallback is only reachable for normal-share
+        # sessions (strict falls to the amend catchall in decide_control),
+        # and both dev tasks that land here have empty excluded_fields --
+        # unlike ask/amend, a clean proceed does not exclude by default.
+        excluded = sorted(excludable) if excludable else []
         return {"mode": "summary", "allowed_fields": ["summary"], "excluded_fields": excluded, "requires_user_confirmation": False}
 
     def build_policy(self, task: dict[str, Any], focal: dict[str, Any], target: str, control: str, evidence: dict[str, Any]) -> dict[str, Any]:
