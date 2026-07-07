@@ -1069,37 +1069,24 @@ class FinalHarness:
     def build_user_response(self, task: dict[str, Any], focal: dict[str, Any], target: str, control: str, scope: dict[str, Any], policy: dict[str, Any]) -> str:
         """Short Korean natural-language message reporting the decision.
 
-        The server A/B established the direction: situation-accurate wording
-        beats the generic baseline stub on semantic_response (0.8596 vs
-        0.8542). So each branch keeps the baseline register
-        ("~하겠습니다" / "확인해야 합니다" / "{target}(으)로") but names the
-        *actual* driver of this task's decision, taken straight from the
-        already-decided structured fields (records / flags / scope) so the
-        sentence can never contradict the answer it accompanies:
-          - hold: name the concrete trigger record (security alert, consent
-            revoked, safety mode) when present; else the baseline line.
-          - ask: distinguish a changed precondition vs an unresolved target
-            ambiguity vs a plain clarification.
-          - proceed to local memory: describe it as a local-only update.
+        This is the server-confirmed optimum for semantic_response. Two
+        server A/B rounds fixed the wording:
+          - baseline four-line stub -> 0.8542
+          - + memory_store-as-local-update and precondition-named variants
+            (this version) -> 0.8596  [best]
+          - + hold-trigger and ask-ambiguity variants on top -> 0.8592
+            (no gain; the extra specificity drifted from the reference)
+        So "more situation-specific" helps only up to these two variants;
+        pushing further stops paying off. Kept exactly at the 0.8596 point.
         """
-        rm = record_map(records_of(task))
         flags = set(policy.get("risk_flags", []))
         mode = scope.get("mode")
 
         if control == "hold":
-            if "security_alert" in rm:
-                return "보안 경보가 확인되어 요청을 진행하지 않겠습니다."
-            consent_val = text_of(rm.get("consent")).lower()
-            if consent_val and any(w in consent_val for w in _CONSENT_NEGATIVE):
-                return "동의가 철회되어 요청을 진행하지 않겠습니다."
-            if "safety_mode" in rm:
-                return "안전 조건 때문에 요청을 진행하지 않겠습니다."
             return "보안, 동의 또는 정책 조건 때문에 진행하지 않겠습니다."
         if control == "ask":
             if "precondition_changed" in flags:
                 return "이전에 확정된 전제가 바뀐 것 같아, 대상이나 허용 범위를 한 번 더 확인해야 합니다."
-            if "ambiguous_focal" in flags or "target_ambiguity" in flags:
-                return "요청하신 대상이 여러 후보 중 하나로 좁혀지지 않아, 어느 대상인지 한 번 더 확인해야 합니다."
             return "대상이나 허용 범위를 한 번 더 확인해야 합니다."
         if control == "amend":
             return f"민감 정보를 제외하고 {target}(으)로 진행하겠습니다."
