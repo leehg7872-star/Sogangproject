@@ -426,6 +426,16 @@ def _resolved_target_value(rm: dict[str, Any]) -> str | None:
 _HEALTH_WORDS = ("건강", "검진", "복약", "점검", "병원", "진료")
 _LIGHTING_WORDS = ("조명", "불빛", "밝기")
 
+# Multi-turn recipient/focal elision: the current request refers back to a
+# recipient or object that an earlier turn of this session already settled
+# ("같은 곳에", "그 자료를", "요청한 곳에"). When the current turn carries no
+# resolved_target / memory channel of its own, carry the prior turn's
+# decision forward rather than falling to a focal attr (often a decoy route
+# on iot/payment/device objects) or a weak default.
+_TARGET_ELISION = ("같은 곳", "같은 수신처", "동일 대상", "방금 확정된", "방금 그", "그곳",
+                   "요청한 곳", "그 자료", "그것", "앞선 대상", "지난 대상", "같은 대상")
+_FOCAL_ELISION = ("그 자료", "그것", "그 항목", "같은 자료", "앞선 자료", "동일 자료", "그 파일")
+
 
 def _recalled_profile(recall: Any, memory: dict[str, Any]) -> dict[str, Any] | None:
     """Resolve a persistent_memory_recall to its stored profile by
@@ -581,10 +591,12 @@ _CONTROL_TABLE: dict[tuple[str, str, str | None, bool], _ControlRule] = {
         _ControlRule("proceed", "matched", "dev 2b6c7dc70c0b + 1d6606209a76"),
     ("internal_binding_confirmed", "redacted_external_boundary", None, True):
         _ControlRule("amend", "matched", "dev 8003c2e5b525 + 20a0410a686c"),
-    ("internal_binding_confirmed", "redacted_external_boundary", "stored_channel_or_visible_recipient", False):
-        _ControlRule("ask", "single", "dev 511b1dc0b84d (unreplicated)"),
-    ("internal_binding_confirmed", "redacted_external_boundary", "surface_recipient_and_resolved_target_both_recent", False):
-        _ControlRule("ask", "single", "dev a976a641dd5a (unreplicated)"),
+    # Removed two single-tier cells (511b1dc0b84d, a976a641dd5a -> ask) that
+    # OVERRODE the matched fallback (redacted_external_boundary -> amend) on
+    # a single dev example each. 5-fold CV showed these are the only
+    # measurable overfit in the whole table (0.007 gap); dropping them lets
+    # the general "redacted_external -> amend" rule apply, trading 0.007 dev
+    # for better out-of-distribution generalization on screening.
     ("user_binding_pending", "dispatch_blocked_until_binding", "approved_channel_or_visible_recipient", False):
         _ControlRule("hold", "single", "dev 022985565adb (unreplicated, but dispatch==user_binding_pending alone is separately confirmed to always hold)"),
     ("user_binding_pending", "dispatch_blocked_until_binding", None, True):
@@ -667,9 +679,19 @@ class FinalHarness:
         plan_events = self.build_plan_events(task, focal_id, target, control, content_scope, policy)
         user_response = self.build_user_response(task, focal, target, control, content_scope, policy)
 
+        # Accumulate this turn's decision so a later turn that elides the
+        # recipient / object can carry it forward (stateful multi-turn agent).
         session["last_focal_id"] = focal_id
         session["last_target"] = target
         session["last_control"] = control
+        if target not in ("user", "memory_store"):
+            session["last_nontrivial_target"] = target
+        if focal_id:
+            session["last_focal"] = focal
+        session.setdefault("turns", []).append({
+            "focal_id": focal_id, "target": target, "control": control,
+            "scope_mode": content_scope.get("mode"),
+        })
 
         return {
             "focal_id": focal_id,
@@ -735,6 +757,18 @@ class FinalHarness:
             if ref_code and ref_code in history_text and ref_code not in excluded_refs:
                 return obj
 
+        # 4.5) Elided object reference ("그 자료를", "같은 자료") -> the object
+        #      an earlier turn already focused, if that same object (by
+        #      ref_code) reappears in this turn's object list.
+        if any(c in str(task.get("prompt", "")) for c in _FOCAL_ELISION):
+            prior_focal = session.get("last_focal")
+            if isinstance(prior_focal, dict):
+                prior_ref = str((prior_focal.get("attrs") or {}).get("ref_code") or "")
+                if prior_ref:
+                    for obj in objects:
+                        if str((obj.get("attrs") or {}).get("ref_code") or "") == prior_ref:
+                            return obj
+
         # 5) Last resort: token overlap between the prompt and object attrs,
         #    still avoiding any explicitly-excluded candidate.
         prompt_tokens = {tok for tok in re.findall(r"[A-Za-z0-9가-힣_]+", str(task.get("prompt", "")).lower()) if len(tok) >= 2}
@@ -779,11 +813,23 @@ class FinalHarness:
         if from_memory:
             return from_memory
 
+        # Multi-turn carryover. With no resolved_target / memory channel of
+        # its own, the recipient is whatever an earlier turn settled -- carry
+        # it forward BEFORE trusting a focal attr, which on iot/payment/device
+        # focal objects (attrs.target = a room/store) is usually a decoy route,
+        # not the real recipient.
+        prompt = str(task.get("prompt", ""))
+        prior_target = session.get("last_nontrivial_target")
+        focal_type = str(focal.get("type") or "")
         attrs = focal.get("attrs") or {}
+        decoy_attr = focal_type in ("iot_routine", "payment_request", "device_setting", "iot_device")
+        if prior_target and (any(c in prompt for c in _TARGET_ELISION) or decoy_attr):
+            return str(prior_target)
+
         for key in ("recipient", "target", "channel", "app", "merchant", "name"):
             if attrs.get(key):
                 return str(attrs[key])
-        return str(session.get("last_target") or "user")
+        return str(session.get("last_nontrivial_target") or session.get("last_target") or "user")
 
     def decide_control(self, task: dict[str, Any], focal: dict[str, Any], target: str, evidence: dict[str, Any]) -> str:
         override = classify_task_override(task)
