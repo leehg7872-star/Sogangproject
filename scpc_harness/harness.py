@@ -706,6 +706,17 @@ class FinalHarness:
             session["last_nontrivial_target"] = target
         if focal_id:
             session["last_focal"] = focal
+            # Index every focal this session has resolved, keyed by ref_code,
+            # most-recent-wins. A later "그 자료" elision can then recover an
+            # object focused several turns back, not only the immediately
+            # preceding turn's focal.
+            prior_ref = str((focal.get("attrs") or {}).get("ref_code") or "")
+            if prior_ref:
+                session.setdefault("focal_refs", {})[prior_ref] = focal
+                order = session.setdefault("focal_ref_order", [])
+                if prior_ref in order:
+                    order.remove(prior_ref)
+                order.append(prior_ref)
 
         return {
             "focal_id": focal_id,
@@ -771,19 +782,23 @@ class FinalHarness:
             if ref_code and ref_code in history_text and ref_code not in excluded_refs:
                 return obj
 
-        # 4.5) Elided object reference ("그 자료를", "같은 자료") -> the object
-        #      an earlier turn already focused, if that same object (by
-        #      ref_code) reappears in this turn's object list. Gated on an
-        #      explicit elision phrase, so it never fires on the single-turn /
-        #      named-object dev tasks.
-        if any(c in str(task.get("prompt", "")) for c in _FOCAL_ELISION):
-            prior_focal = session.get("last_focal")
-            if isinstance(prior_focal, dict):
-                prior_ref = str((prior_focal.get("attrs") or {}).get("ref_code") or "")
-                if prior_ref:
-                    for obj in objects:
-                        if str((obj.get("attrs") or {}).get("ref_code") or "") == prior_ref:
-                            return obj
+        # 4.5) Elided object reference ("그 자료를", "같은 자료") -> an object
+        #      an EARLIER turn of this session already focused, if that same
+        #      object (by ref_code) reappears in this turn's object list.
+        #      Consults the full session focal index most-recent-first, so a
+        #      reference can reach past an intervening turn (turn 4 eliding
+        #      turn 2's object), and only after the marker-chain / record /
+        #      history branches above have all declined -- it upgrades what
+        #      would otherwise be a weak token-overlap guess, never overrides
+        #      a record-pinned focal. Gated on an explicit elision phrase in
+        #      the prompt or a history summary, so it stays inert on the
+        #      single-turn / named-object dev tasks (which have neither).
+        elision_text = str(task.get("prompt", "")) + " " + history_raw
+        if any(c in elision_text for c in _FOCAL_ELISION):
+            objs_by_ref = {str((o.get("attrs") or {}).get("ref_code") or ""): o for o in objects}
+            for ref in reversed(session.get("focal_ref_order", [])):
+                if ref and ref in objs_by_ref:
+                    return objs_by_ref[ref]
 
         # 5) Last resort: token overlap between the prompt and object attrs,
         #    still avoiding any explicitly-excluded candidate.
