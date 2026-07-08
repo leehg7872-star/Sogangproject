@@ -700,6 +700,14 @@ _DISPATCH_UNKNOWN_DEFAULT = "authority_incomplete"
 # confirmed authority -- exactly TERMS_GUIDE's "read the structure, not the
 # label". The semantic alternative ("planned redacted disclosure" -> ask)
 # found no supporting twin and was rejected.
+#
+# SERVER-CONFIRMED: a controlled A/B submission flipping exactly the 5
+# GENERIC tasks this alias alone decides (hold -> ask) dropped the public
+# score 0.8596 -> 0.8556. The -0.0040 delta is ~85% of the theoretical
+# maximum loss (5 x 0.66/700 = 0.0047), meaning all 5 are publicly scored
+# and were near-perfect under hold -- the alias mapping AND the hold-cell
+# scope (none) / policy (hold flags) / plan (read+guard) emissions are
+# validated end-to-end. Do not change this mapping.
 _BOUNDARY_ALIASES = {"redacted_after_selection_boundary": "dispatch_blocked_until_binding"}
 _KNOWN_BOUNDARY = {"local_update_boundary", "redacted_external_boundary", "dispatch_blocked_until_binding"}
 _BOUNDARY_UNKNOWN_DEFAULT = "redacted_external_boundary"
