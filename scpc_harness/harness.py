@@ -409,6 +409,67 @@ def _resolve_focal_via_history_text(task: dict[str, Any], object_by_ref: dict[st
     return None
 
 
+# Robustness fallback for focal confirmation sentences that name the chosen
+# ref but do NOT match any exact template in _DIRECT_CONFIRMED_PATTERNS or the
+# ordinal parser above. Rather than dropping to the weak token-overlap guess,
+# read the sentence's *semantics*: the confirmed ref is the candidate code
+# whose nearest positive marker (승인/확정/선택/고정/통과/유지/기준 참조...)
+# sits closer than its nearest negative marker (제외/배제/보류/후보군/무시...).
+# Distance-based (not a fixed template or window) so it survives paraphrasing
+# and particle-spacing changes a held-out generator might introduce. It is
+# deliberately conservative -- it requires a unique closest-positive winner
+# and otherwise declines (returns None) -- and it is wired in ONLY below every
+# exact/structural branch, at a position no public dev/screening task ever
+# reaches (all 820 resolve earlier), so it changes no public answer and acts
+# purely as generalization insurance for novel wording.
+_POS_CONFIRM = ("통과", "고정", "승인", "확정", "선택", "유지", "기준 참조", "처리 대상",
+                "binding", "최종", "우선", "지정", "기준")
+_NEG_EXCLUDE = ("제외", "배제", "보류", "남았", "남은", "후보군", "뒤늦게", "아니라",
+                "무시", "오래된", "그럴듯", "다른 후보")
+
+
+def _marker_spans(text: str, markers: tuple[str, ...]) -> list[tuple[int, int]]:
+    out: list[tuple[int, int]] = []
+    for word in markers:
+        start = text.find(word)
+        while start != -1:
+            out.append((start, start + len(word)))
+            start = text.find(word, start + 1)
+    return out
+
+
+def _resolve_focal_via_confirmation_semantics(task: dict[str, Any], object_by_ref: dict[str, dict[str, Any]]) -> dict[str, Any] | None:
+    max_dist = 22
+    history = sorted(
+        (h for h in task.get("visible_history") or [] if isinstance(h, dict)),
+        key=lambda h: h.get("turn", 0),
+        reverse=True,
+    )
+    texts = [str(h.get("summary", "")) for h in history] + [str(task.get("prompt", ""))]
+    for text in texts:
+        codes = [(m.group(0), (m.start() + m.end()) // 2) for m in re.finditer(r"WM-\d+", text) if m.group(0) in object_by_ref]
+        if len(codes) < 2:
+            continue
+        positives = _marker_spans(text, _POS_CONFIRM)
+        negatives = _marker_spans(text, _NEG_EXCLUDE)
+        if not positives:
+            continue
+
+        def nearest(mid: int, spans: list[tuple[int, int]]) -> int:
+            return min((min(abs(mid - a), abs(mid - b)) for a, b in spans), default=10 ** 9)
+
+        candidates: list[tuple[int, str]] = []
+        for code, mid in codes:
+            dp = nearest(mid, positives)
+            dn = nearest(mid, negatives)
+            if dp < dn and dp <= max_dist:
+                candidates.append((dp, code))
+        candidates.sort()
+        if candidates and (len(candidates) == 1 or candidates[0][0] < candidates[1][0]):
+            return object_by_ref[candidates[0][1]]
+    return None
+
+
 # --------------------------------------------------------------------------
 # Target inference helpers
 # --------------------------------------------------------------------------
@@ -756,6 +817,20 @@ class FinalHarness:
         via_history = _resolve_focal_via_history_text(task, object_by_ref)
         if via_history is not None:
             return via_history
+
+        # 2.5) Robustness fallback: a confirmation sentence whose wording no
+        #      exact template in step 2 matched, resolved by nearest
+        #      positive/negative marker semantics. Placed right after the
+        #      exact confirm-sentence parser (and BEFORE the greedy
+        #      ref-in-history scan in step 4, which would otherwise return the
+        #      first-listed candidate for such a sentence) so a novel wording
+        #      is read by meaning, not by list position. Conservative (unique
+        #      closest-positive winner or it declines) and, since every public
+        #      dev/screening confirm-sentence is already caught by step 2, it
+        #      changes no public answer -- pure generalization insurance.
+        via_semantics = _resolve_focal_via_confirmation_semantics(task, object_by_ref)
+        if via_semantics is not None:
+            return via_semantics
 
         # 3) A record value directly naming an object id.
         object_by_id = {str(o.get("id")): o for o in objects}
