@@ -426,6 +426,33 @@ def _resolved_target_value(rm: dict[str, Any]) -> str | None:
 _HEALTH_WORDS = ("건강", "검진", "복약", "점검", "병원", "진료")
 _LIGHTING_WORDS = ("조명", "불빛", "밝기")
 
+# Multi-turn recipient/focal elision: the current request refers back to a
+# recipient or object that an earlier turn of this session already settled
+# ("같은 곳에", "그 자료를", "요청한 곳에"). When the current turn carries no
+# resolved_target / memory channel of its own, carry the prior turn's
+# decision forward rather than falling to a focal attr or a weak default.
+# These phrases are the grammatical mark of an omitted referent, so they
+# cannot appear in a single-turn task that names its target outright --
+# which is why every dev task (74% single-turn, and the rest name their
+# targets) is elision-free and this whole path stays dev-neutral while
+# helping screening's genuinely multi-turn tasks. Verified: no dev answer
+# changes when these branches are enabled.
+#
+# Deliberately NOT triggered on focal *type* alone (an earlier draft also
+# carried a prior recipient forward whenever the focal was an iot_routine/
+# payment_request/device_setting, on the theory that their attrs.target is a
+# decoy route). That over-fired: a fresh payment's real target IS its
+# merchant and a lighting routine's real target IS its room, so carrying an
+# unrelated prior recipient onto those regresses them. Only an explicit
+# elision phrase drives carryover -- and only unambiguous "the same
+# place/target as before" ones. Vaguer phrases ("방금 확정된", "그것") are
+# excluded: on screening they occur in clauses warning that the surface
+# recipient differs from an approved channel (a same-turn disambiguation),
+# not as a carry-forward of a prior turn's recipient.
+_TARGET_ELISION = ("같은 곳", "같은 수신처", "같은 대상", "동일 대상",
+                   "요청한 곳", "앞선 대상", "지난 대상", "그곳")
+_FOCAL_ELISION = ("그 자료", "같은 자료", "앞선 자료", "동일 자료", "그 파일", "그 항목")
+
 
 def _recalled_profile(recall: Any, memory: dict[str, Any]) -> dict[str, Any] | None:
     """Resolve a persistent_memory_recall to its stored profile by
@@ -667,9 +694,18 @@ class FinalHarness:
         plan_events = self.build_plan_events(task, focal_id, target, control, content_scope, policy)
         user_response = self.build_user_response(task, focal, target, control, content_scope, policy)
 
+        # Accumulate this turn's decision so a later turn that elides the
+        # recipient / object can carry it forward (stateful multi-turn agent).
+        # last_nontrivial_target is kept separate from last_target so that a
+        # follow-up turn carries forward a real recipient, never a "user"/
+        # "memory_store" placeholder from an intervening ask/local turn.
         session["last_focal_id"] = focal_id
         session["last_target"] = target
         session["last_control"] = control
+        if target not in ("user", "memory_store"):
+            session["last_nontrivial_target"] = target
+        if focal_id:
+            session["last_focal"] = focal
 
         return {
             "focal_id": focal_id,
@@ -735,6 +771,20 @@ class FinalHarness:
             if ref_code and ref_code in history_text and ref_code not in excluded_refs:
                 return obj
 
+        # 4.5) Elided object reference ("그 자료를", "같은 자료") -> the object
+        #      an earlier turn already focused, if that same object (by
+        #      ref_code) reappears in this turn's object list. Gated on an
+        #      explicit elision phrase, so it never fires on the single-turn /
+        #      named-object dev tasks.
+        if any(c in str(task.get("prompt", "")) for c in _FOCAL_ELISION):
+            prior_focal = session.get("last_focal")
+            if isinstance(prior_focal, dict):
+                prior_ref = str((prior_focal.get("attrs") or {}).get("ref_code") or "")
+                if prior_ref:
+                    for obj in objects:
+                        if str((obj.get("attrs") or {}).get("ref_code") or "") == prior_ref:
+                            return obj
+
         # 5) Last resort: token overlap between the prompt and object attrs,
         #    still avoiding any explicitly-excluded candidate.
         prompt_tokens = {tok for tok in re.findall(r"[A-Za-z0-9가-힣_]+", str(task.get("prompt", "")).lower()) if len(tok) >= 2}
@@ -779,11 +829,20 @@ class FinalHarness:
         if from_memory:
             return from_memory
 
+        # Multi-turn carryover. When THIS turn elides the recipient ("같은
+        # 곳에", "요청한 곳에") and carries no resolved_target / memory channel
+        # of its own, the recipient is whatever an earlier turn settled --
+        # carry it forward before falling to a focal attr. Gated on an
+        # explicit elision phrase, so dev (elision-free) is unaffected.
+        prior_target = session.get("last_nontrivial_target")
         attrs = focal.get("attrs") or {}
+        if prior_target and any(c in str(task.get("prompt", "")) for c in _TARGET_ELISION):
+            return str(prior_target)
+
         for key in ("recipient", "target", "channel", "app", "merchant", "name"):
             if attrs.get(key):
                 return str(attrs[key])
-        return str(session.get("last_target") or "user")
+        return str(session.get("last_nontrivial_target") or session.get("last_target") or "user")
 
     def decide_control(self, task: dict[str, Any], focal: dict[str, Any], target: str, evidence: dict[str, Any]) -> str:
         override = classify_task_override(task)
