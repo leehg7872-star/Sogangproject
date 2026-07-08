@@ -582,6 +582,10 @@ def _recalled_memory_conflicts(task: dict[str, Any], rm: dict[str, Any], memory:
 # --------------------------------------------------------------------------
 _CONSENT_NEGATIVE = ("revoked", "withdraw", "denied", "철회", "거부")
 
+# A recognised corrective clause in the prompt maps straight to its control
+# (Tier-2 specialization: the user's explicit "as of now" instruction wins).
+_OVERRIDE_TO_CONTROL = {"LOCAL_ONLY": "proceed", "ASK": "ask", "HOLD": "hold", "AMEND": "amend"}
+
 # The screening pool introduces record values never seen in dev for fields the
 # control ladder already depends on. Each alias below was chosen by which
 # *known* value has the same dispatch<->boundary co-occurrence partner set
@@ -935,84 +939,97 @@ class FinalHarness:
         return str(session.get("last_nontrivial_target") or session.get("last_target") or "user")
 
     def decide_control(self, task: dict[str, Any], focal: dict[str, Any], target: str, evidence: dict[str, Any]) -> str:
+        """Two-tier control decision.
+
+        Tier 2 (specialization) recognises the two situations the public data
+        pins exactly -- an explicit corrective clause in the prompt, and the
+        learned dispatch/boundary/ambiguity combinations in _CONTROL_TABLE --
+        and returns them verbatim. Everything else defers to Tier 1
+        (_control_general), the principled safety -> ambiguity -> minimization
+        ladder that decides from abstract features alone and therefore keeps
+        working on tasks whose exact combination or wording was never seen.
+        """
+        # === Tier 2: specialization (exact recognitions of the public generator) ===
         override = classify_task_override(task)
+        if override in _OVERRIDE_TO_CONTROL:
+            return _OVERRIDE_TO_CONTROL[override]
+
         rm = record_map(records_of(task))
+        rule = _lookup_control_table(
+            _dispatch_state(rm), _boundary_state(rm), rm.get("ambiguous_target"), bool(rm.get("ambiguous_focal"))
+        )
+        if rule is not None:
+            return rule.control
 
-        if override == "LOCAL_ONLY":
-            return "proceed"
-        if override == "ASK":
-            return "ask"
-        if override == "HOLD":
-            return "hold"
-        if override == "AMEND":
-            return "amend"
+        # === Tier 1: general principle (works on any task) ===
+        return self._control_general(task, rm, focal, target, evidence)
 
+    def _control_general(self, task: dict[str, Any], rm: dict[str, Any], focal: dict[str, Any], target: str, evidence: dict[str, Any]) -> str:
+        """General control principle: the answer for ANY task in this domain,
+        derived only from abstract signals (no exact dev/screening pattern).
+
+        The ladder is a fixed precedence of four concerns, most-protective
+        first, so an unfamiliar task still lands on the safe rung rather than
+        a blind default:
+            1. safety      -> hold   (a broken precondition / revoked consent /
+                                       security or privacy stop; also a request
+                                       that contradicts a stored 'avoid')
+            2. ambiguity   -> ask    (target/focal unresolved, a superseded
+                                       route, a pending user binding, a stored-
+                                       memory conflict)
+            3. minimization-> amend  (an external/redacted boundary or policy
+                                       that allows only a reduced disclosure,
+                                       or a prior-failure lesson to apply)
+            4. otherwise   -> proceed (a purely local op, or nothing to
+                                       withhold -- strict share posture still
+                                       tips a bare default to amend)
+        """
+        # A purely local memory write has nothing to guard, clarify, or redact.
         if "persistent_memory_write" in rm:
             return "proceed"
 
-        # Hard safety stops.
+        dispatch = _dispatch_state(rm)
+        boundary = _boundary_state(rm)
+        external_policy = rm.get("external_share_policy")
+
+        # 1) Safety: refuse to act on an invalidated precondition.
         if "security_alert" in rm or "safety_mode" in rm or "privacy_guard" in rm:
             return "hold"
         consent_val = text_of(rm.get("consent")).lower()
         if consent_val and any(w in consent_val for w in _CONSENT_NEGATIVE):
             return "hold"
-
-        dispatch = _dispatch_state(rm)
-        boundary = _boundary_state(rm)
-        external_policy = rm.get("external_share_policy")
-        ambiguous_target = rm.get("ambiguous_target")
-        ambiguous_focal = bool(rm.get("ambiguous_focal"))
-
-        # 1) Exact, controlled-comparison-backed combination -> use it
-        #    verbatim, whether it's "matched" (replicated) or "single"
-        #    (observed once).
-        rule = _lookup_control_table(dispatch, boundary, ambiguous_target, ambiguous_focal)
-        if rule is not None:
-            return rule.control
-
-        # 2) No exact combination on file: fall back to whichever single
-        #    field is independently well-supported on its own.
-        #    A route confirmed earlier in the session being explicitly
-        #    superseded (target_changed_after_turn) is confirmed to mean
-        #    "ask" regardless of the other fields -- 5/5 dev occurrences
-        #    agree, including the one whose value is the descriptive
-        #    "prior_success_route_superseded" sentinel rather than a real
-        #    target name.
-        if "target_changed_after_turn" in rm:
-            return "ask"
-        #    dispatch_authority_check == user_binding_pending is confirmed to
-        #    mean "hold" regardless of the other fields.
         if dispatch == "user_binding_pending":
             return "hold"
+        if external_policy == "doctor_note_forbidden":
+            return "hold"
+        # A request that contradicts a stored "avoid" preference is a hard
+        # stop, not a clarification (same shape as the other safety holds).
+        if _recalled_memory_conflicts(task, rm, self.memory):
+            return "hold"
+
+        # 2) Ambiguity: a settled recipient/object is missing -> ask the user.
+        if "target_changed_after_turn" in rm:
+            return "ask"
         if dispatch == "authority_incomplete":
             return "ask"
         if boundary == "dispatch_blocked_until_binding":
             return "ask"
 
+        # 3) Minimization: disclosure is allowed but must be reduced.
         if external_policy in ("raw_quote_forbidden", "raw_sensitive_forbidden", "summary_only_allowed"):
             return "amend"
-        if external_policy == "doctor_note_forbidden":
-            return "hold"
         if boundary == "redacted_external_boundary":
             return "amend"
         if evidence.get("requires_redaction"):
             return "amend"
-        if ambiguous_target or ambiguous_focal:
+
+        # 2') Residual ambiguity that is not a route/binding state.
+        if rm.get("ambiguous_target") or rm.get("ambiguous_focal"):
             return "ask"
         if "memory_conflict" in rm:
             return "ask"
-        # A request that contradicts a stored "avoid" preference is a hard
-        # stop, not a clarification: dev final_dev_0937ccedef94 (send hana a
-        # nuts coupon while her recalled profile says avoid=nuts) has
-        # control=hold with precondition_invalidated/safety flags -- the
-        # same shape as the other safety holds.
-        if _recalled_memory_conflicts(task, rm, self.memory):
-            return "hold"
-        # Reusing a prior successful result whose profile also records a
-        # failure lesson (last_failure_reason, e.g. raw_quote was rejected
-        # externally) means "repeat the success but apply the lesson" ->
-        # amend, not plain proceed (dev final_dev_7add02f9e8b8;
-        # prior_failure_lesson is itself a public-ontology value).
+
+        # 3') Reuse a prior success but apply its recorded failure lesson.
         recall = rm.get("persistent_memory_recall")
         if isinstance(recall, dict) and recall.get("memory_class") == "prior_result":
             profile = _recalled_profile(recall, self.memory)
@@ -1021,8 +1038,7 @@ class FinalHarness:
         if "enterprise_policy_recall" in rm:
             return "amend"
 
-        # No structured route/ambiguity/policy signal fired at all: fall
-        # back to the session's overall share posture as the deciding factor.
+        # 4) Nothing structured fired: the session's share posture decides.
         if rm.get("session_share_policy") == "strict":
             return "amend"
         return "proceed"
