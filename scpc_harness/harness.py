@@ -1044,18 +1044,61 @@ class FinalHarness:
         return "proceed"
 
     def build_content_scope(self, task: dict[str, Any], focal: dict[str, Any], target: str, control: str, evidence: dict[str, Any]) -> dict[str, Any]:
+        """Two-tier disclosure scope.
+
+        Tier 2 recognises three situations the public data fixes to a mode the
+        general rule would not pick -- a guardrail-gated ask that redacts, and
+        two proceed cases (a pre-approved trusted channel, and a composite
+        plan-chain request) that share the item raw. Everything else defers to
+        Tier 1 (_content_scope_general): the information-minimization mapping
+        from the control decision and the focal's own sensitivity.
+        """
         rm = record_map(records_of(task))
         dispatch = _dispatch_state(rm)
         boundary = _boundary_state(rm)
         excludable = excludable_fields_of(focal)
+        is_local = target == "memory_store" or boundary == "local_update_boundary"
 
-        if control == "proceed" and (target == "memory_store" or boundary == "local_update_boundary"):
-            # The standard local-update exclusion trio is not universal:
-            # across all 40 dev status_only references, a normal-share
-            # session whose focal carries no excludable fields gets an
-            # *empty* excluded_fields (8/8), while a strict session (29/29)
-            # or any focal that does carry excludable fields (3/3) gets the
-            # fixed trio -- even when the focal's own fields differ from it.
+        # === Tier 2: specialization (recognized situations) ===
+        # (a) An ask challenging a confirmed internal binding under a redacted
+        #     external boundary, flagged by guardrail_ladder_signal, redacts
+        #     rather than summarizes (dev 781f8cf29ff8; the general ask rule
+        #     would say summary).
+        if (control == "ask"
+                and dispatch == "internal_binding_confirmed"
+                and boundary == "redacted_external_boundary"
+                and "guardrail_ladder_signal" in rm):
+            excluded = sorted(excludable) if excludable else ["raw_quote"]
+            return {"mode": "redacted", "allowed_fields": ["summary"], "excluded_fields": excluded, "requires_user_confirmation": True}
+        # (b) proceed to an external target already confirmed as an approved,
+        #     trusted channel: nothing needs to be withheld.
+        if (control == "proceed" and not is_local
+                and rm.get("ambiguous_target") == "approved_channel_or_visible_recipient"
+                and boundary == "redacted_external_boundary"):
+            return {"mode": "raw", "allowed_fields": ["summary", "title"], "excluded_fields": [], "requires_user_confirmation": False}
+        # (c) a composite plan-chain proceed ("...하나의 계획으로 처리해줘")
+        #     shares the item itself (mode raw, no summarize step).
+        if control == "proceed" and not is_local and "하나의 계획" in str(task.get("prompt", "")):
+            return {"mode": "raw", "allowed_fields": ["summary", "title"], "excluded_fields": [], "requires_user_confirmation": False}
+
+        # === Tier 1: general information-minimization ===
+        return self._content_scope_general(control, rm, excludable, is_local)
+
+    def _content_scope_general(self, control: str, rm: dict[str, Any], excludable: set[str], is_local: bool) -> dict[str, Any]:
+        """General disclosure scope for ANY task: the mode follows the control
+        decision, and what is withheld follows the focal's own sensitivity --
+        no reference to a specific example.
+
+            hold    -> none      (disclose nothing)
+            local   -> status_only (device-only update, never leaves)
+            ask     -> summary   (a clarification shows only a summary)
+            amend   -> redacted  (send, minus the sensitive fields)
+            proceed -> summary   (external default)
+        """
+        if control == "proceed" and is_local:
+            # Device-only status update. The standard exclusion trio is dropped
+            # only for a normal-share session whose focal carries nothing
+            # excludable; a strict session or any excludable field keeps it.
             scope = dict(LOCAL_UPDATE_SCOPE)
             if rm.get("session_share_policy") == "normal" and not excludable:
                 scope["excluded_fields"] = []
@@ -1065,55 +1108,26 @@ class FinalHarness:
             return {"mode": "none", "allowed_fields": [], "excluded_fields": [], "requires_user_confirmation": False}
 
         if control == "ask":
-            # Most "ask" scope modes are pure label noise -- identical-input
-            # dev twins split summary/redacted/none, and an expected-score
-            # analysis confirms "summary" is already the score-maximizing
-            # emission for 25 of 26 dev ask feature-buckets. The one bucket
-            # with a *clean* discriminator: within internal_binding_confirmed
-            # + redacted_external_boundary, guardrail_ladder_signal present
-            # means redacted (dev 781f8cf29ff8) and absent means summary (dev
-            # 511b1dc0b84d, a976a641dd5a) -- 3/3, no exception. guardrail is
-            # an already-trusted signal (it gates several _CONTROL_TABLE
-            # cells), and the partial-credit structure floors the downside at
-            # 0.6 if this ever misfires.
-            if (dispatch == "internal_binding_confirmed"
-                    and boundary == "redacted_external_boundary"
-                    and "guardrail_ladder_signal" in rm):
-                excluded = sorted(excludable) if excludable else ["raw_quote"]
-                return {"mode": "redacted", "allowed_fields": ["summary"], "excluded_fields": excluded, "requires_user_confirmation": True}
-            # dev_answers.json: 24/26 "ask" tasks exclude just ["name"] when
-            # the focal has a name field, else fall back to ["raw_quote"];
-            # other excludable fields (numeric_value/location/rrn) present
-            # without "name" are never singled out on their own for "ask".
+            # Ask modes are otherwise label-noise across dev twins, so summary
+            # (the score-maximizing default) is emitted; the withheld field is
+            # the name when present, else a blanket raw_quote.
             excluded = ["name"] if "name" in excludable else ["raw_quote"]
             return {"mode": "summary", "allowed_fields": ["summary"], "excluded_fields": excluded, "requires_user_confirmation": True}
 
         if control == "amend":
             excluded = sorted(excludable) if excludable else ["raw_quote"]
-            needs_confirm = bool(rm.get("ambiguous_target"))
-            return {"mode": "redacted", "allowed_fields": ["summary"], "excluded_fields": excluded, "requires_user_confirmation": needs_confirm}
+            return {"mode": "redacted", "allowed_fields": ["summary"], "excluded_fields": excluded, "requires_user_confirmation": bool(rm.get("ambiguous_target"))}
 
-        # proceed to an external target already confirmed as an approved,
-        # trusted channel: nothing needs to be withheld.
-        if rm.get("ambiguous_target") == "approved_channel_or_visible_recipient" and boundary == "redacted_external_boundary":
-            return {"mode": "raw", "allowed_fields": ["summary", "title"], "excluded_fields": [], "requires_user_confirmation": False}
-
-        # A composite plan-chain request ("...하나의 계획으로 처리해줘") that
-        # still ends in a clean proceed shares the item itself: both dev
-        # proceed tasks with this template are mode raw / [summary, title]
-        # (and their reference plans have no summarize step), while the
-        # proceed tasks without it are mode summary.
-        if "하나의 계획" in str(task.get("prompt", "")):
-            return {"mode": "raw", "allowed_fields": ["summary", "title"], "excluded_fields": [], "requires_user_confirmation": False}
-
-        # Generic proceed fallback is only reachable for normal-share
-        # sessions (strict falls to the amend catchall in decide_control),
-        # and both dev tasks that land here have empty excluded_fields --
-        # unlike ask/amend, a clean proceed does not exclude by default.
+        # proceed (external): a clean proceed does not exclude by default.
         excluded = sorted(excludable) if excludable else []
         return {"mode": "summary", "allowed_fields": ["summary"], "excluded_fields": excluded, "requires_user_confirmation": False}
 
     def build_policy(self, task: dict[str, Any], focal: dict[str, Any], target: str, control: str, evidence: dict[str, Any]) -> dict[str, Any]:
+        """General-by-construction (Tier 1 only, no separable specialization):
+        every risk_flag / violation / confirmation is derived from abstract
+        signals -- the control decision, the target's locality, the focal's
+        sensitivity, and route/ambiguity/share-posture states -- so it carries
+        over to any task without a pattern table."""
         rm = record_map(records_of(task))
         flags: set[str] = set()
         violations: set[str] = set()
@@ -1189,6 +1203,11 @@ class FinalHarness:
         }
 
     def build_plan_events(self, task: dict[str, Any], focal_id: str, target: str, control: str, scope: dict[str, Any], policy: dict[str, Any]) -> list[dict[str, Any]]:
+        """General-by-construction (Tier 1 only): the plan is the control
+        decision expressed as verbs -- hold -> read+guard, ask -> read+clarify,
+        local -> read+verify+update, otherwise read+(redact|summarize)+dispatch
+        -- with args drawn from the scope/policy already computed, so it needs
+        no task-specific pattern."""
         rm = record_map(records_of(task))
         boundary = _boundary_state(rm)
         if control == "proceed" and (target == "memory_store" or boundary == "local_update_boundary"):
