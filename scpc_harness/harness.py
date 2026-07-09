@@ -207,15 +207,15 @@ def excludable_fields_of(obj: dict[str, Any]) -> set[str]:
 # --------------------------------------------------------------------------
 _HOLD_CONCEPT = ("허용", "근거", "전제", "승인", "동의", "consent")
 _HOLD_STOP = (
-    "안 된다", "위험", "보류", "멈춘다", "멈춰야", "막아야", "막는다", "차단", "금지",
-    "실행하면 안", "처리하지 않는다",
+    "안 된다", "안 됩니다", "위험", "보류", "멈춘다", "멈춰야", "막아야", "막는다", "차단", "금지",
+    "중단", "중지", "실행하면 안", "진행하시면 안", "처리하지 않는다",
 )
 
 _LOCAL_NOSEND = ("외부", "바깥", "밖으로", "보내", "전송", "전달", "넘기", "공유", "알리")
 _LOCAL_LOCAL = ("내부", "로컬", "기기", "장치")
 _LOCAL_STATE_UPDATE = ("상태",)
 _LOCAL_UPDATE_VERB = ("갱신", "업데이트", "남기", "바꾸", "정리", "새로 쓰")
-_LOCAL_NEGATION = ("말고", "대신", "생략", "접", "취소", "빼고", "아니라", "아닌")
+_LOCAL_NEGATION = ("말고", "마시고", "말라", "않", "없이", "대신", "생략", "접", "취소", "빼고", "아니라", "아닌")
 # "로컬 처리로 단정하지 말고 ... 확인" is telling the agent NOT to assume the
 # local path and to ask instead -- the opposite of a local-only override.
 _LOCAL_ONLY_EXCLUDE = ("단정하지",)
@@ -238,7 +238,7 @@ _ASK_PATTERNS = (
     re.compile(r"확인\s*질문을\s*하라"),
     re.compile(r"다시\s*확인"),
     re.compile(r"(?:재차|다시|한\s*번\s*더)\s*(?:점검|확인|문의)"),
-    re.compile(r"재확인"),
+    re.compile(r"재확인(?!.{0,10}(?:완료|이미|끝))"),
     re.compile(r"물어봐야"),
     re.compile(r"확인을\s*거친다"),
     re.compile(r"clarification"),
@@ -268,7 +268,8 @@ def classify_override_clause(text: str) -> str:
     ):
         return "LOCAL_ONLY"
 
-    if _any_in(text, _AMEND_SUMMARY) and _any_in(text, _AMEND_TRIM):
+    if (_any_in(text, _AMEND_SUMMARY) and _any_in(text, _AMEND_TRIM)
+            and "요약 없이" not in text and "요약본 없이" not in text):
         return "AMEND"
 
     if any(p.search(text) for p in _ASK_PATTERNS):
