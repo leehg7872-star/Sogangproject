@@ -205,7 +205,7 @@ def excludable_fields_of(obj: dict[str, Any]) -> set[str]:
 # confirmation, redaction-only) rather than on literal sentences, so they
 # generalize across paraphrased wording.
 # --------------------------------------------------------------------------
-_HOLD_CONCEPT = ("허용", "근거", "전제", "승인", "consent")
+_HOLD_CONCEPT = ("허용", "근거", "전제", "승인", "동의", "consent")
 _HOLD_STOP = (
     "안 된다", "위험", "보류", "멈춘다", "멈춰야", "막아야", "막는다", "차단", "금지",
     "실행하면 안", "처리하지 않는다",
@@ -221,7 +221,7 @@ _LOCAL_NEGATION = ("말고", "대신", "생략", "접", "취소", "빼고", "아
 _LOCAL_ONLY_EXCLUDE = ("단정하지",)
 
 _AMEND_SUMMARY = ("요약",)
-_AMEND_TRIM = ("제거", "덜어내", "제외", "포함하지 않는다", "남기지 않는다", "허용된다", "정제된")
+_AMEND_TRIM = ("제거", "덜어내", "제외", "빼고", "포함하지 않는다", "남기지 않는다", "허용된다", "정제된")
 
 # Require the confirm/ask trigger word to sit close to its supporting
 # phrase, rather than merely co-occurring anywhere in the sentence --
