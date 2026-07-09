@@ -55,6 +55,33 @@ SEG = [
  ('처리해줘. 단, 보류 여부를 판정해야 한다. 다만, 바깥으로 보내지 말고 내부 상태 업데이트로 끝내라.', 'LOCAL_ONLY'),
 ]
 
+
+# --- 확장 2차: 가족별 추가 변형 ---
+CASES += [
+ ('밖으로는 알리지 말고 내부 메모 갱신으로 마무리하라는 정정이 최신이다.', 'LOCAL_ONLY'),
+ ('외부 채널 전달은 접어두고 기기 상태만 다시 정리해라.', 'LOCAL_ONLY'),
+ ('수신자를 어느 쪽으로 할지 미확정이라 답을 정하기 어렵다는 메모가 있다.', 'ASK'),
+ ('발송 전 사용자에게 확인 질문을 하라는 조건이 마지막에 붙었다.', 'ASK'),
+ ('이전 허용이 철회된 상태라 이번 실행은 막는다.', 'HOLD'),
+ ('전제가 바뀌어 위험하니 지금은 처리하지 않는다.', 'HOLD'),
+ ('위치 정보는 제외하고 요약 수준만 공유 가능하다.', 'AMEND'),
+ ('원문 첨부 없이 요약 문장만 보내는 것까지 허용된다.', 'AMEND'),
+]
+# --- 분절 추가: 3절, 순서 역전 ---
+SEG += [
+ ('보내줘. 단, 요약만 허용된다. 단, 대상 재확인이 필요하다. 다만, 동의 철회로 실행하면 안 된다.', 'HOLD'),
+ ('공유해줘. 다만, 확인이 필요하면 물어봐야 한다.', 'ASK'),
+]
+# --- 정밀도 함정: 분류되면 안 되는 문장 (기대 GENERIC) ---
+TRAPS = [
+ '보류 여부를 판정해서 알려줘.',
+ '상위 금지 원칙과 최신 수신처 상태를 차례로 검토해서 결정해줘.',
+ '동의 상태 값을 그대로 읽어와 화면에 표시해줘.',
+ '요약 파일이 어디 있는지 찾아줘.',
+ '확인 없이 바로 진행해도 된다는 뜻은 아니다.',
+ '외부 공유 이력을 조회해줘.',
+]
+
 def main():
     fails = 0
     for clause, exp in CASES:
@@ -67,12 +94,17 @@ def main():
             }.get(exp, ())
             print(f'MISS[C] 기대={exp} 실제={got} 개념탐지={hints} | {clause}')
             fails += 1
+    for clause in TRAPS:
+        got = H.classify_override_clause(clause)
+        if got != 'GENERIC':
+            print(f'MISS[P] 과탐지 기대=GENERIC 실제={got} | {clause}')
+            fails += 1
     for prompt, exp in SEG:
         got = H.classify_task_override({'prompt': prompt})
         if got != exp:
             print(f'MISS[A] 분절 실패 기대={exp} 실제={got} | {prompt[:60]}')
             fails += 1
-    total = len(CASES) + len(SEG)
+    total = len(CASES) + len(SEG) + len(TRAPS)
     print(f'배터리: {total - fails}/{total} 통과')
     return fails
 
