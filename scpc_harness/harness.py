@@ -253,7 +253,8 @@ def _any_in(text: str, words: tuple[str, ...]) -> bool:
 
 def classify_override_clause(text: str) -> str:
     """Return one of LOCAL_ONLY / ASK / HOLD / AMEND / GENERIC."""
-    if _any_in(text, _HOLD_CONCEPT) and _any_in(text, _HOLD_STOP):
+    if (_any_in(text, _HOLD_CONCEPT) and _any_in(text, _HOLD_STOP)
+            and "차단 해제" not in text and "중단된" not in text):
         return "HOLD"
 
     has_nosend = _any_in(text, _LOCAL_NOSEND)
