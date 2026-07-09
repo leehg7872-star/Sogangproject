@@ -65,6 +65,14 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
+# Deliberate configuration: emit answers from the GENERAL layers only --
+# documented protocol (marker chain), language understanding (clause/ordinal/
+# polarity), promoted principles, runtime learner, chain guards. The four
+# example-derived components (exact confirm-sentence regexes, _CONTROL_TABLE,
+# persona reveals, scope Tier-2 recognitions) are gated off. Flip to False to
+# restore the specialized emission (the historical 0.8596 public answers).
+GENERAL_ONLY = True
+
 SUBMISSION_SCHEMA = "scpc.final.answer.v1"
 FIXED_SLM_ID = "scpc-final-fixed-slm-local-facade"
 ROOT = Path(__file__).resolve().parent
@@ -402,7 +410,7 @@ def _resolve_focal_via_history_text(task: dict[str, Any], object_by_ref: dict[st
     )
     texts = [str(h.get("summary", "")) for h in history] + [str(task.get("prompt", ""))]
     for text in texts:
-        for pattern in _DIRECT_CONFIRMED_PATTERNS:
+        for pattern in (() if GENERAL_ONLY else _DIRECT_CONFIRMED_PATTERNS):
             m = pattern.search(text)
             if m and m.group(1) in object_by_ref:
                 return object_by_ref[m.group(1)]
@@ -611,7 +619,7 @@ def _persona_reveal_profile(recall: Any) -> dict[str, Any] | None:
     the recall's memory_key matches no written profile. Contains channel/room
     fields only (never 'avoid'/'tone' etc.), so it can steer target inference
     but can never fabricate a memory conflict or a control change."""
-    if not isinstance(recall, dict):
+    if GENERAL_ONLY or not isinstance(recall, dict):
         return None
     return _PERSONA_FIELD_REVEALS.get(str(recall.get("person")))
 
@@ -794,7 +802,7 @@ _CONTROL_TABLE: dict[tuple[str, str, str | None, bool], _ControlRule] = {
 
 
 def _lookup_control_table(dispatch: str | None, boundary: str | None, ambiguous_target: str | None, ambiguous_focal: bool) -> _ControlRule | None:
-    if dispatch is None or boundary is None:
+    if GENERAL_ONLY or dispatch is None or boundary is None:
         return None
     return _CONTROL_TABLE.get((dispatch, boundary, ambiguous_target, ambiguous_focal))
 
@@ -1356,6 +1364,8 @@ class FinalHarness:
         is_local = target == "memory_store" or boundary == "local_update_boundary"
 
         # === Tier 2: specialization (recognized situations) ===
+        if GENERAL_ONLY:
+            return self._content_scope_general(control, rm, excludable, is_local)
         # (a) An ask challenging a confirmed internal binding under a redacted
         #     external boundary, flagged by guardrail_ladder_signal, redacts
         #     rather than summarizes (dev 781f8cf29ff8; the general ask rule

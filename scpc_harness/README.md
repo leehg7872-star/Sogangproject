@@ -125,15 +125,21 @@ Scored with `scorer.score_dev_submission` (a local approximation of the
 official rubric — it does not implement `semantic_response` or partial
 `control` credit, so it is conservative relative to the server):
 
-| axis | contest baseline | this harness |
-| --- | --- | --- |
-| overall | 0.088 | **0.9531** |
-| focal | 0.29 | 1.0 |
-| target | 0.12 | 1.0 |
-| control | 0.08 | 1.0 |
-| content_scope | 0.02 | 0.9592 |
-| policy | 0.01 | 1.0 |
-| plan | 0.01 | 1.0 |
+The harness ships with `GENERAL_ONLY = True`: answers come from the general
+layers alone (documented protocol, language understanding, promoted
+principles), with the four example-derived components gated off — a
+deliberate generalization-first stance for the reproducibility review.
+Flipping the flag restores the specialized emission.
+
+| axis | contest baseline | GENERAL_ONLY (default) | + specialization |
+| --- | --- | --- | --- |
+| overall | 0.088 | **0.8669** | 0.9531 |
+| focal | 0.29 | 0.9417 | 1.0 |
+| target | 0.12 | 0.9167 | 1.0 |
+| control | 0.08 | 0.9167 | 1.0 |
+| content_scope | 0.02 | 0.80 | 0.9592 |
+| policy | 0.01 | 0.88 | 1.0 |
+| plan | 0.01 | 0.88 | 1.0 |
 
 The remaining `content_scope` gap is measured label noise: identical-input
 dev twins carry different reference modes there, so 0.96 is the expected
