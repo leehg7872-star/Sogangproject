@@ -959,6 +959,30 @@ class FinalHarness:
             if not scope.get("requires_user_confirmation"):
                 scope["requires_user_confirmation"] = True
                 flags.append("repair:ask_scope_confirm")
+        # Inference-chain coherence guards (reference-validated: these hold in
+        # every dev reference answer, including the deliberate exception that
+        # an ask MAY carry a redacted scope with no redact step -- the
+        # clarification precedes any redaction). Flag-only: the pipeline
+        # currently emits zero violations on both pools, so any future flag
+        # is a chain break introduced by a later edit.
+        events = answer["plan_events"]
+        verbs = [e.get("verb") for e in events]
+        if control in ("proceed", "amend") and scope.get("mode") != "status_only":
+            dispatches = [e for e in events if e.get("verb") == "dispatch"]
+            if dispatches and dispatches[-1].get("target") != answer["target"]:
+                flags.append("chain:dispatch_target_mismatch")
+        if "redact" in verbs and scope.get("mode") != "redacted":
+            flags.append("chain:redact_without_redacted_mode")
+        if control == "hold" and "guard" not in verbs:
+            flags.append("chain:hold_without_guard")
+        if control == "ask" and not any(e.get("verb") == "clarify" and e.get("target") == "user" for e in events):
+            flags.append("chain:ask_without_clarify")
+        if control == "proceed" and scope.get("mode") == "none":
+            flags.append("chain:proceed_with_none_scope")
+        for e in events:
+            if e.get("verb") == "summarize" and e.get("args", {}).get("mode") not in (scope.get("mode"), None):
+                flags.append("chain:summarize_mode_mismatch")
+
         available = set(task.get("available_actions") or [])
         if available:
             illegal = sorted({e.get("verb") for e in answer["plan_events"] if e.get("verb") not in available})
