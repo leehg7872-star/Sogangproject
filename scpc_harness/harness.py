@@ -221,7 +221,7 @@ _LOCAL_NEGATION = ("말고", "대신", "생략", "접", "취소", "빼고", "아
 _LOCAL_ONLY_EXCLUDE = ("단정하지",)
 
 _AMEND_SUMMARY = ("요약",)
-_AMEND_TRIM = ("제거", "덜어내", "제외", "빼고", "포함하지 않는다", "남기지 않는다", "허용된다", "정제된")
+_AMEND_TRIM = ("제거", "덜어내", "제외", "빼고", "없이", "포함하지 않는다", "남기지 않는다", "허용된다", "정제된")
 
 # Require the confirm/ask trigger word to sit close to its supporting
 # phrase, rather than merely co-occurring anywhere in the sentence --
