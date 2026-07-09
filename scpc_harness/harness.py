@@ -237,6 +237,8 @@ _ASK_PATTERNS = (
     re.compile(r"확인\s*절차를\s*먼저"),
     re.compile(r"확인\s*질문을\s*하라"),
     re.compile(r"다시\s*확인"),
+    re.compile(r"(?:재차|다시|한\s*번\s*더)\s*(?:점검|확인|문의)"),
+    re.compile(r"재확인"),
     re.compile(r"물어봐야"),
     re.compile(r"확인을\s*거친다"),
     re.compile(r"clarification"),
@@ -868,36 +870,57 @@ class FinalHarness:
         import collections
         _RUNTIME_ALIASES["dispatch"].clear()
         _RUNTIME_ALIASES["boundary"].clear()
-        d_part: dict[str, set] = collections.defaultdict(set)
-        b_part: dict[str, set] = collections.defaultdict(set)
+        d_cnt: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
+        b_cnt: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
         for task in tasks:
             rm = record_map(records_of(task))
             d, b = rm.get("dispatch_authority_check"), rm.get("share_boundary_update")
             if isinstance(d, str) and isinstance(b, str):
-                d_part[d].add(b)
-                b_part[b].add(d)
+                d_cnt[d][b] += 1
+                b_cnt[b][d] += 1
 
-        def sig(partners: set, known_other: set, aliases_other: dict) -> frozenset:
-            return frozenset(aliases_other.get(p, p) for p in partners if aliases_other.get(p, p) in known_other)
+        def counts(pool_pairs, aliases_other, runtime_other, known_other):
+            out: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
+            for a, bs in pool_pairs.items():
+                for b, n in bs.items():
+                    b2 = aliases_other.get(b, runtime_other.get(b, b))
+                    if b2 in known_other:
+                        out[a][b2] += n
+            return out
 
-        for u, parts in d_part.items():
-            if u in _KNOWN_DISPATCH or u in _DISPATCH_ALIASES:
-                continue
-            s = sig(parts, _KNOWN_BOUNDARY, _BOUNDARY_ALIASES)
-            if not s:
-                continue
-            matches = [k for k in _KNOWN_DISPATCH if sig(d_part.get(k, set()), _KNOWN_BOUNDARY, _BOUNDARY_ALIASES) == s]
-            if len(matches) == 1:
-                _RUNTIME_ALIASES["dispatch"][u] = matches[0]
-        for u, parts in b_part.items():
-            if u in _KNOWN_BOUNDARY or u in _BOUNDARY_ALIASES:
-                continue
-            s = sig(parts, _KNOWN_DISPATCH, _DISPATCH_ALIASES)
-            if not s:
-                continue
-            matches = [k for k in _KNOWN_BOUNDARY if sig(b_part.get(k, set()), _KNOWN_DISPATCH, _DISPATCH_ALIASES) == s]
-            if len(matches) == 1:
-                _RUNTIME_ALIASES["boundary"][u] = matches[0]
+        def cosine(c1, c2):
+            import math
+            num = sum(c1[k] * c2.get(k, 0) for k in c1)
+            d1 = math.sqrt(sum(v * v for v in c1.values()))
+            d2 = math.sqrt(sum(v * v for v in c2.values()))
+            return num / (d1 * d2) if d1 and d2 else 0.0
+
+        # Fixpoint (2 passes): a synonym learned for one field lets the other
+        # field's co-occurrences resolve through it on the second pass. An
+        # unknown label is adopted when its partner-frequency profile is
+        # decisively closest (cosine >= 0.85 with a >=1.15 margin over the
+        # runner-up) to exactly one known label's profile -- robust both to
+        # partial masking (a synonym pool hides some partners) and to known
+        # labels with overlapping partner sets.
+        for _ in range(2):
+            dc = counts(d_cnt, _BOUNDARY_ALIASES, _RUNTIME_ALIASES["boundary"], _KNOWN_BOUNDARY)
+            for u in list(d_cnt):
+                if u in _KNOWN_DISPATCH or u in _DISPATCH_ALIASES or u in _RUNTIME_ALIASES["dispatch"]:
+                    continue
+                if not dc.get(u):
+                    continue
+                scored = sorted(((cosine(dc[u], dc.get(k, collections.Counter())), k) for k in _KNOWN_DISPATCH), reverse=True)
+                if scored[0][0] >= 0.85 and (len(scored) < 2 or scored[0][0] >= 1.15 * scored[1][0]):
+                    _RUNTIME_ALIASES["dispatch"][u] = scored[0][1]
+            bc = counts(b_cnt, _DISPATCH_ALIASES, _RUNTIME_ALIASES["dispatch"], _KNOWN_DISPATCH)
+            for u in list(b_cnt):
+                if u in _KNOWN_BOUNDARY or u in _BOUNDARY_ALIASES or u in _RUNTIME_ALIASES["boundary"]:
+                    continue
+                if not bc.get(u):
+                    continue
+                scored = sorted(((cosine(bc[u], bc.get(k, collections.Counter())), k) for k in _KNOWN_BOUNDARY), reverse=True)
+                if scored[0][0] >= 0.85 and (len(scored) < 2 or scored[0][0] >= 1.15 * scored[1][0]):
+                    _RUNTIME_ALIASES["boundary"][u] = scored[0][1]
 
     def _control_attribution(self, task: dict[str, Any]) -> str:
         override = classify_task_override(task)
