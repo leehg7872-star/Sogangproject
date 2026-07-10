@@ -125,13 +125,13 @@ Scored with `scorer.score_dev_submission` (a local approximation of the
 official rubric — it does not implement `semantic_response` or partial
 `control` credit, so it is conservative relative to the server):
 
-The harness ships with `GENERAL_ONLY = True`: answers come from the general
-layers alone (documented protocol, language understanding, promoted
-principles), with the four example-derived components gated off — a
-deliberate generalization-first stance for the reproducibility review.
-Flipping the flag restores the specialized emission.
+The harness ships with `GENERAL_ONLY = False`, reproducing the submitted
+public answers exactly. Setting the flag to True gates off the four
+example-derived components and emits from the general layers alone (the
+server-measured cost of that stance and the full deficit map are recorded
+in AAR_HISTORY.md).
 
-| axis | contest baseline | GENERAL_ONLY (default) | + specialization |
+| axis | contest baseline | GENERAL_ONLY | default (specialized) |
 | --- | --- | --- | --- |
 | overall | 0.088 | **0.8669** | 0.9531 |
 | focal | 0.29 | 0.9417 | 1.0 |

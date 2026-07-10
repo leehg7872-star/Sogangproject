@@ -71,7 +71,7 @@ from typing import Any
 # example-derived components (exact confirm-sentence regexes, _CONTROL_TABLE,
 # persona reveals, scope Tier-2 recognitions) are gated off. Flip to False to
 # restore the specialized emission (the historical 0.8596 public answers).
-GENERAL_ONLY = True
+GENERAL_ONLY = False
 
 SUBMISSION_SCHEMA = "scpc.final.answer.v1"
 FIXED_SLM_ID = "scpc-final-fixed-slm-local-facade"
